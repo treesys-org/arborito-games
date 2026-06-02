@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Arborito Games Arcade</title>
+    <link rel="stylesheet" href="/tailwind.css">
+</head>
+<body class="m-0 min-h-dvh box-border flex flex-col items-center bg-neutral-900 font-sans text-white pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
+
+    <header class="mb-10 w-full max-w-5xl pt-5 text-center">
+        <h1 class="m-0 text-4xl font-extrabold tracking-tight md:text-5xl">
+            ARBORITO <span class="text-green-500">GAMES</span>
+        </h1>
+        <p class="mt-2.5 text-lg text-neutral-400">Decentralized Context-Aware Arcade</p>
+    </header>
+
+    <div id="game-list" class="grid w-full max-w-6xl grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6">
+        <div class="mt-12 font-mono text-neutral-400">Loading Cartridges...</div>
+    </div>
+
+    <footer class="mt-auto pt-10 text-center text-xs text-neutral-600">
+        Arborito Games v2.0 — Pure JS engines · Tailwind CSS (local build, no CDN)
+    </footer>
+
+    <script>
+        async function loadGames() {
+            const container = document.getElementById('game-list');
+            try {
+                const response = await fetch('./manifest.json');
+                if (!response.ok) throw new Error("Manifest not found");
+
+                const games = await response.json();
+                container.innerHTML = '';
+
+                games.forEach(game => {
+                    const card = document.createElement('a');
+                    card.className = 'game-card flex flex-col items-center rounded-xl border border-neutral-700 bg-neutral-800 p-6 text-center text-inherit no-underline transition duration-200 hover:-translate-y-1 hover:border-green-500 hover:shadow-xl';
+                    card.href = game.path;
+
+                    card.innerHTML = `
+                        <span class="mb-4 block text-6xl">${game.icon}</span>
+                        <div class="mb-2 text-xl font-bold">${game.name}</div>
+                        <div class="text-sm leading-relaxed text-neutral-400">${game.description}</div>
+                    `;
+
+                    container.appendChild(card);
+                });
+            } catch (e) {
+                container.innerHTML = `<div class="col-span-full text-center text-red-500">${e.message}</div>`;
+            }
+        }
+
+        window.onload = loadGames;
+    </script>
+</body>
+</html>

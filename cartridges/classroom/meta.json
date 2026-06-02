@@ -1,0 +1,6 @@
+{
+  "name": "Classroom Simulator",
+  "description": "Simulador de aula RPG. Juzga a tus compañeros y responde al profesor. Modo estático: cuestionarios Quiz V2 del autor; modo dinámico: IA local opcional.",
+  "icon": "👨‍🏫",
+  "version": "1.1.0"
+}

@@ -1,0 +1,658 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <link rel="stylesheet" href="/tailwind.css">
+    <title>Memory Garden: Overgrowth</title>
+    <style>
+        :root { --glass: rgba(255, 255, 255, 0.1); --glass-border: rgba(255, 255, 255, 0.2); --accent: #34d399; }
+        html {
+            height: 100%;
+            -webkit-text-size-adjust: 100%;
+        }
+        body {
+            font-family: system-ui, sans-serif;
+            background: #0f172a;
+            overflow: hidden;
+            user-select: none;
+            color: white;
+            margin: 0;
+            min-height: 100vh;
+            min-height: 100dvh;
+            min-height: 100svh;
+        }
+        
+        
+        .hidden-fade { opacity: 0; pointer-events: none; }
+        
+        
+        .perspective-container {
+            perspective: 1200px;
+            flex: 1 1 0;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 0;
+            padding-top: 0.35rem;
+            overflow: hidden;
+        }
+        
+        
+        #card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            width: 100%;
+            max-width: 95vw;
+            margin: 0 auto;
+            max-height: min(75vh, 75dvh);
+            align-content: start;
+        }
+        @media(min-width: 768px) {
+            #card-grid { grid-template-columns: repeat(4, 1fr); gap: 1rem; padding-top: 2rem; }
+        }
+
+        .card-container { width: 100%; height: 5rem; } 
+        @media(min-width: 768px) { .card-container { height: 7rem; } }
+        @media(min-width: 1024px) { .card-container { height: 8rem; } }
+        @media(min-width: 1280px) { .card-container { height: 10rem; } }
+
+        .card { 
+            position: relative; width: 100%; height: 100%; 
+            transform-style: preserve-3d; 
+            -webkit-transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            cursor: pointer; 
+        }
+        .card.flipped { transform: rotateY(180deg); }
+        .card.matched { animation: pulseMatch 0.5s ease-out forwards; }
+        
+        .card-face {
+            position: absolute; inset: 0; 
+            -webkit-backface-visibility: hidden; backface-visibility: hidden;
+            border-radius: 1rem; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--glass-border);
+        }
+        
+        .face-front { 
+            background: linear-gradient(135deg, #064e3b, #065f46); 
+            transform: rotateY(0deg); 
+        }
+        
+        .face-back { 
+            background: rgba(255, 255, 255, 0.95); color: #0f172a; 
+            transform: rotateY(180deg); 
+            padding: 8px; 
+            text-align: center; 
+            font-weight: 800; 
+            font-size: clamp(0.7rem, 2vw, 1.5rem); 
+            line-height: 1.1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            word-wrap: break-word;
+        }
+        
+        
+        .border-emerald-500 { border-bottom: 4px solid #10b981; }
+        .border-yellow-500 { border-bottom: 4px solid #eab308; }
+
+        
+        /* Placeholder cells when the lesson has fewer than MAX_PAIR_SLOTS pairs. */
+        .memory-slot-empty { pointer-events: none; opacity: 0.45; }
+        .memory-empty-inner {
+            width: 100%; height: 100%; min-height: inherit;
+            border-radius: 1rem; border: 2px dashed rgba(148, 163, 184, 0.35);
+            background: rgba(15, 23, 42, 0.35);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+        }
+        .memory-empty-icon { font-size: 1.25rem; color: rgba(148, 163, 184, 0.5); font-weight: 300; }
+
+        @media (max-width: 640px) {
+            .card-face { border-radius: 0.5rem; border-width: 1px; }
+            .face-back { padding: 4px; font-size: 0.7rem; }
+        }
+
+        /* Mode picker on the start screen — segmented control. */
+        .mode-picker {
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 999px;
+            padding: 0.25rem;
+            margin: 0 auto 1rem;
+            width: min(20rem, 92vw);
+        }
+        .mode-btn {
+            flex: 1 1 0;
+            padding: 0.55rem 0.6rem;
+            border: none;
+            background: transparent;
+            color: #cbd5e1;
+            font-weight: 700;
+            font-size: 0.78rem;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            font-family: inherit;
+        }
+        .mode-btn[aria-pressed="true"] {
+            background: linear-gradient(135deg, #047857, #10b981);
+            color: white;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45);
+        }
+        .mode-btn:focus-visible {
+            outline: 2px solid #34d399;
+            outline-offset: 2px;
+        }
+        .mode-desc {
+            color: #94a3b8;
+            font-family: monospace;
+            font-size: 0.65rem;
+            margin-bottom: 1rem;
+            min-height: 1.5em;
+            line-height: 1.4;
+        }
+
+        /* Review view — single tap-to-flip card.  Front: question, back:
+         * answer.  Two ratings only: ✓ Bien / ↻ Repasar.  Quiz V2 is the
+         * source of truth for the question/answer pair, but we never expose
+         * the multi-modal interaction (multiple choice, ordering, etc.) —
+         * the user did not see the answer yet, so making them choose between
+         * shades of confidence makes no pedagogical sense. */
+        #review-view { display: none; }
+        #review-view.active {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 0;
+            min-height: 0;
+            gap: 0.7rem;
+            padding-bottom: 0.5rem;
+        }
+        .review-progress {
+            font-size: 0.65rem; color: #6ee7b7;
+            font-family: monospace; text-align: center;
+            letter-spacing: 0.12em; text-transform: uppercase;
+            margin: 0;
+        }
+        .review-stage {
+            flex: 1 1 0; min-height: 0;
+            display: flex; align-items: stretch; justify-content: center;
+            perspective: 1600px;
+            -webkit-perspective: 1600px;
+        }
+        .review-card-host {
+            flex: 1 1 0; min-height: 0;
+            width: 100%; max-width: 26rem;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .flip-card {
+            position: relative;
+            width: 100%;
+            height: min(22rem, 58vh);
+            min-height: 14rem;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            -webkit-transform-style: preserve-3d;
+            transition: transform 0.65s cubic-bezier(0.6, 0.05, 0.25, 1);
+            border-radius: 1.25rem;
+        }
+        .flip-card.is-flipped { transform: rotateY(180deg); }
+        @media (prefers-reduced-motion: reduce) {
+            .flip-card { transition: none; }
+        }
+        .flip-face {
+            position: absolute; inset: 0;
+            border-radius: 1.25rem;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex; flex-direction: column;
+            padding: 1.1rem 1.1rem 1rem;
+            box-shadow: 0 18px 45px -22px rgba(0, 0, 0, 0.75),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+        }
+        .flip-face.front {
+            background: linear-gradient(160deg, #0b3b30 0%, #052e26 65%, #021410 100%);
+            border: 1px solid rgba(52, 211, 153, 0.35);
+            color: #ecfdf5;
+            align-items: center; justify-content: center;
+            text-align: center;
+        }
+        .flip-face.back {
+            background: linear-gradient(165deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid rgba(96, 165, 250, 0.35);
+            color: #f1f5f9;
+            transform: rotateY(180deg);
+        }
+        .flip-card-head {
+            position: absolute; top: 0.6rem; left: 0.7rem; right: 0.7rem;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.55rem; font-family: monospace;
+            text-transform: uppercase; letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.55);
+        }
+        .flip-card-head .lesson-name {
+            max-width: 60%; text-align: right;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            color: #cbd5e1;
+        }
+
+        .qmark {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(1.75rem, 6vw, 2.5rem);
+            font-weight: 900;
+            line-height: 1;
+            color: rgba(52, 211, 153, 0.65);
+            margin-bottom: 0.6rem;
+            user-select: none;
+        }
+        .flip-front-prompt {
+            font-size: clamp(1.05rem, 3.2vw, 1.35rem);
+            font-weight: 700;
+            line-height: 1.35;
+            margin: 0 0 0.95rem;
+            max-width: 22rem;
+            color: #ecfdf5;
+            white-space: pre-line;
+        }
+        .flip-front-hint {
+            font-size: 0.65rem; font-family: monospace;
+            text-transform: uppercase; letter-spacing: 0.18em;
+            color: rgba(110, 231, 183, 0.85);
+            background: rgba(0, 0, 0, 0.35);
+            padding: 0.35rem 0.7rem; border-radius: 99px;
+            border: 1px solid rgba(52, 211, 153, 0.35);
+        }
+        .flip-back-eyebrow {
+            font-size: 0.6rem; font-family: monospace;
+            text-transform: uppercase; letter-spacing: 0.16em;
+            color: #93c5fd;
+            margin: 1.5rem 0 0.4rem;
+        }
+        .flip-back-concept {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(0.95rem, 2.6vw, 1.15rem);
+            font-weight: 700;
+            color: #fef08a; margin: 0 0 0.5rem;
+            line-height: 1.25;
+        }
+        .flip-back-answer {
+            font-size: clamp(1rem, 3vw, 1.3rem);
+            font-weight: 800;
+            line-height: 1.35;
+            color: #f8fafc;
+            background: rgba(15, 118, 110, 0.18);
+            border: 1px solid rgba(94, 234, 212, 0.3);
+            border-radius: 0.6rem;
+            padding: 0.7rem 0.8rem;
+            margin: 0;
+            flex: 0 0 auto;
+        }
+        .review-actions {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
+            flex: 0 0 auto;
+        }
+        .review-actions.is-hidden { visibility: hidden; pointer-events: none; }
+        .rate-btn {
+            padding: 0.85rem 0.55rem;
+            border-radius: 0.7rem;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: white; font-weight: 800;
+            font-size: 0.95rem;
+            font-family: inherit;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            gap: 0.45rem;
+            transition: transform 0.05s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
+        }
+        .rate-btn:hover { transform: translateY(-1px); }
+        .rate-btn:active { transform: scale(0.97); }
+        .rate-btn .rate-icon { font-size: 1.1rem; line-height: 1; }
+        .rate-btn[data-q="0"] {
+            background: linear-gradient(180deg, rgba(220, 38, 38, 0.4), rgba(127, 29, 29, 0.55));
+            border-color: rgba(248, 113, 113, 0.55);
+            box-shadow: 0 8px 24px -14px rgba(220, 38, 38, 0.7);
+        }
+        .rate-btn[data-q="0"]:hover { background: linear-gradient(180deg, rgba(220, 38, 38, 0.55), rgba(127, 29, 29, 0.7)); }
+        .rate-btn[data-q="5"] {
+            background: linear-gradient(180deg, rgba(5, 150, 105, 0.55), rgba(6, 78, 59, 0.65));
+            border-color: rgba(52, 211, 153, 0.65);
+            box-shadow: 0 8px 24px -14px rgba(5, 150, 105, 0.75);
+        }
+        .rate-btn[data-q="5"]:hover { background: linear-gradient(180deg, rgba(16, 185, 129, 0.7), rgba(6, 95, 70, 0.8)); }
+
+        .review-empty {
+            text-align: center; color: #cbd5e1;
+            padding: 1.5rem 1rem; font-family: monospace;
+            font-size: 0.85rem; line-height: 1.5;
+            margin: auto;
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px dashed rgba(148, 163, 184, 0.4);
+            border-radius: 1rem;
+            width: min(100%, 26rem);
+        }
+        .review-empty .review-empty-icon {
+            font-size: 3rem; display: block; margin-bottom: 0.6rem;
+        }
+        .review-skip-btn {
+            margin-top: 1rem; padding: 0.55rem 1.25rem;
+            border-radius: 0.5rem; border: 1px solid rgba(148, 163, 184, 0.4);
+            background: transparent; color: #cbd5e1; font-weight: 700; font-size: 0.78rem;
+            cursor: pointer; font-family: inherit;
+        }
+        .review-skip-btn:hover { color: white; border-color: rgba(255, 255, 255, 0.6); }
+        
+        @media (pointer: coarse), (max-width: 768px) {
+            #card-grid {
+                max-height: min(78dvh, 78vh);
+            }
+        }
+        @media (pointer: coarse) and (orientation: landscape),
+            (max-width: 768px) and (orientation: landscape) {
+            #game-ui {
+                padding-top: max(0.35rem, env(safe-area-inset-top));
+                padding-bottom: max(0.35rem, env(safe-area-inset-bottom));
+            }
+            header {
+                min-height: 2.75rem;
+                margin-bottom: 0.35rem;
+                padding-bottom: 4px;
+            }
+            #card-grid {
+                max-height: min(68dvh, 68vh);
+                gap: 0.45rem;
+            }
+            .card-container { height: clamp(2.75rem, 14vmin, 4.5rem); }
+            .perspective-container { padding-top: 0.25rem; }
+        }
+
+        @keyframes pulseMatch {
+            0% { transform: rotateY(180deg) scale(1); box-shadow: 0 0 0 rgba(255,255,255,0); }
+            50% { transform: rotateY(180deg) scale(1.1); box-shadow: 0 0 30px #4ade80; border-color: #4ade80; }
+            100% { transform: rotateY(180deg) scale(0); opacity: 0; }
+        }
+
+        
+        #bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+        
+        #game-ui {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            min-height: 0;
+            padding: 1rem;
+            padding-top: max(1rem, env(safe-area-inset-top));
+            padding-bottom: max(1rem, env(safe-area-inset-bottom));
+            box-sizing: border-box;
+        }
+
+        header {
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 1rem; 
+            position: relative; 
+            z-index: 60; 
+            pointer-events: none; 
+            height: auto; min-height: 4rem; 
+            flex-shrink: 0;
+            
+            background: linear-gradient(to bottom, #0f172a 60%, rgba(15, 23, 42, 0) 100%);
+            padding-bottom: 10px;
+        }
+        
+        .header-content { pointer-events: auto; }
+        
+        h1 {
+            font-size: 1.5rem; font-weight: 900; letter-spacing: -0.05em; line-height: 1; margin: 0;
+            background: linear-gradient(to right, #4ade80, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        @media(min-width: 768px) { h1 { font-size: 1.875rem; } }
+
+        #lesson-topic {
+            font-size: 0.6rem; color: #34d399; font-family: monospace; text-transform: uppercase; letter-spacing: 0.1em;
+            margin-top: 0.25rem; transition: opacity 1s; max-width: min(200px, 92vw); white-space: normal;
+        }
+        .lesson-progress {
+            font-size: 0.55rem; color: #64748b; font-family: monospace; letter-spacing: 0.08em;
+            margin-top: 0.15rem;
+        }
+        @media(min-width: 768px) { #lesson-topic { font-size: 0.75rem; } .lesson-progress { font-size: 0.65rem; } }
+
+        .level-chip {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            background: rgba(52, 211, 153, 0.12); border: 1px solid rgba(52, 211, 153, 0.35);
+            border-radius: 999px; padding: 0.15rem 0.55rem; margin-bottom: 0.35rem;
+            font-family: monospace; font-size: 0.65rem; color: #6ee7b7;
+        }
+        #level-display { font-weight: 900; font-size: 0.85rem; color: #34d399; }
+
+        .score-box { text-align: right; pointer-events: auto; }
+        #score-label { font-size: 0.75rem; color: #9ca3af; font-weight: 700; text-transform: uppercase; }
+        #score-display { font-size: 1.5rem; font-weight: 900; font-family: monospace; line-height: 1; }
+        @media(min-width: 768px) { #score-display { font-size: 2.25rem; } }
+
+        .combo-bar-container { width: 5rem; height: 6px; background: rgba(0,0,0,0.5); border-radius: 99px; overflow: hidden; margin-top: 8px; margin-left: auto; }
+        @media(min-width: 768px) { .combo-bar-container { width: 8rem; } }
+        .combo-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #facc15, #fbbf24); transition: width 0.2s linear; }
+        
+        .overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            background: rgba(15, 23, 42, 0.9);
+            transition: opacity 0.5s;
+            backdrop-filter: blur(5px);
+            padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+                max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        
+        .start-container { text-align: center; padding: 2rem; max-width: 28rem; position: relative; }
+        .bg-icon {
+            position: absolute; top: -2.5rem; left: 50%; transform: translateX(-50%); font-size: 4.5rem; opacity: 0.2; filter: blur(4px);
+        }
+        @media(min-width: 768px) { .bg-icon { top: -5rem; font-size: 8rem; } }
+
+        .start-title {
+            font-size: 2.25rem; font-weight: 900; margin-bottom: 0.5rem; letter-spacing: -0.05em; color: #34d399; line-height: 1;
+        }
+        .start-title span { color: white; }
+        @media(min-width: 768px) { .start-title { font-size: 3.75rem; } }
+        
+        .start-desc { color: #9ca3af; margin-bottom: 2rem; font-family: monospace; font-size: 0.75rem; }
+        @media(min-width: 768px) { .start-desc { font-size: 0.875rem; } }
+
+        #loading-state { margin-bottom: 1rem; }
+        .spinner { width: 3rem; height: 3rem; border: 4px solid #10b981; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) {
+            .spinner { animation: none; border-top-color: #10b981; opacity: 0.85; }
+        }
+        #loading-text { color: #6ee7b7; font-weight: 700; font-size: 0.875rem; }
+
+        #btn-start {
+            position: relative; padding: 1rem 2rem; background: #059669; color: white; font-weight: 700; font-size: 1.125rem; border: none; cursor: pointer; transition: all 0.2s; clip-path: polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%); width: 100%;
+        }
+        @media(min-width: 768px) { #btn-start { width: auto; padding: 1.25rem 3rem; font-size: 1.25rem; } }
+        #btn-start:hover { background: #10b981; transform: scale(1.05); }
+        #btn-start:active { transform: scale(0.95); }
+
+        
+        #victory-screen { text-align: center; }
+        #victory-title { font-size: 1.875rem; font-weight: 900; color: #facc15; margin-bottom: 0.5rem; text-shadow: 0 0 15px rgba(250,204,21,0.5); }
+        @media(min-width: 768px) { #victory-title { font-size: 3rem; } }
+        
+        .score-line { font-size: 1.25rem; color: white; margin-bottom: 0.5rem; }
+        .high-score-line { font-size: 1.125rem; color: #9ca3af; margin-bottom: 1rem; }
+        .wins-line { font-size: 0.875rem; color: #6ee7b7; margin-bottom: 1.5rem; font-family: monospace; }
+
+        #level-up-banner {
+            font-size: 1rem; font-weight: 800; color: #34d399; margin-bottom: 0.75rem;
+            text-shadow: 0 0 12px rgba(52, 211, 153, 0.45);
+        }
+        #level-up-banner.hidden { display: none; }
+
+        .victory-actions { display: flex; flex-direction: column; gap: 0.65rem; align-items: center; width: min(18rem, 90vw); }
+        #btn-continue {
+            padding: 0.85rem 2rem; background: #059669; color: white; font-weight: 700; cursor: pointer;
+            border: none; transition: all 0.2s; font-size: 1rem; width: 100%;
+            clip-path: polygon(8% 0, 100% 0, 100% 82%, 92% 100%, 0 100%, 0 18%);
+        }
+        #btn-continue:hover { background: #10b981; transform: scale(1.03); }
+        #btn-retry, #btn-restart {
+            padding: 0.65rem 1.5rem; border: 1px solid rgba(255,255,255,0.35); background: transparent;
+            color: #cbd5e1; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.85rem; width: 100%;
+        }
+        #btn-retry:hover, #btn-restart:hover { border-color: white; color: white; }
+
+        #round-loader {
+            position: fixed; inset: 0; z-index: 55; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(4px);
+        }
+        #round-loader.hidden { display: none; }
+
+        #rotate-warning {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: #0f172a;
+            color: #34d399;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            padding: max(1.25rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+                max(1.25rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+            box-sizing: border-box;
+        }
+        .rotate-icon { font-size: 4rem; margin-bottom: 1rem; }
+        
+        
+        /* Phone landscape: block play and show rotate overlay (avoids false positives on tablets). */
+        @media screen and (pointer: coarse) and (orientation: landscape) and (max-width: 900px) and (max-height: 560px) {
+            #game-ui,
+            #start-screen,
+            #victory-screen { display: none !important; }
+            #rotate-warning { display: flex !important; }
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <div id="rotate-warning">
+        <div class="rotate-icon">📱 ⟳</div>
+        <h1 id="rotate-title" style="font-size: 1.5rem; font-weight: 900; margin-bottom: 0.5rem; text-transform: uppercase;">Portrait Mode<br>Recommended</h1>
+        <p id="rotate-desc" style="font-size: 0.875rem; opacity: 0.7; font-family: monospace;">Let the garden grow tall.</p>
+    </div>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <div id="game-ui" class="hidden">
+        <header>
+            <div class="header-content">
+                <h1>MEMORY<br>GARDEN</h1>
+                <p id="lesson-topic" class="opacity-0">...</p>
+                <p id="lesson-progress" class="lesson-progress opacity-0">...</p>
+            </div>
+            <div class="score-box">
+                <div class="level-chip">
+                    <span id="level-label">Level</span>
+                    <span id="level-display">1</span>
+                </div>
+                <div id="score-label">Score</div>
+                <div id="score-display">0</div>
+                <div class="combo-bar-container">
+                    <div id="combo-bar" class="combo-bar"></div>
+                </div>
+            </div>
+        </header>
+
+        <main class="perspective-container" id="cards-view">
+            <div id="card-grid">
+                </div>
+        </main>
+
+        <main id="review-view">
+            <p id="review-progress" class="review-progress">…</p>
+            <div class="review-stage">
+                <div id="review-card-host" class="review-card-host">
+                    <!-- flip-card or empty-state injected per branch -->
+                </div>
+            </div>
+            <div id="review-actions" class="review-actions is-hidden" aria-hidden="true">
+                <button class="rate-btn" data-q="0" type="button">
+                    <span class="rate-icon" aria-hidden="true">↻</span>
+                    <span id="rate-again-label">Repasar</span>
+                </button>
+                <button class="rate-btn" data-q="5" type="button">
+                    <span class="rate-icon" aria-hidden="true">✓</span>
+                    <span id="rate-good-label">Bien</span>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <div id="start-screen" class="overlay">
+        <div class="start-container">
+            <div class="bg-icon">🌿</div>
+            <h1 class="start-title">OVER<br><span>GROWTH</span></h1>
+            <p class="start-desc">A High-Speed Memory Synthesis</p>
+
+            <div class="mode-picker" role="group" aria-label="Game mode">
+                <button id="mode-cards" class="mode-btn" type="button" aria-pressed="true" data-mode="cards">🃏 PARES</button>
+                <button id="mode-review" class="mode-btn" type="button" aria-pressed="false" data-mode="review">🧠 REPASO</button>
+            </div>
+            <p id="mode-desc" class="mode-desc">Empareja términos con sus definiciones en una rejilla rápida.</p>
+
+            <div id="loading-state" class="hidden">
+                <div class="spinner"></div>
+                <p id="loading-text">Consulting the Sage...</p>
+            </div>
+
+            <button id="btn-start">
+                <span>INITIALIZE</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="victory-screen" class="overlay hidden-fade">
+        <h2 id="victory-title">GARDEN BLOOMED</h2>
+        <p id="level-up-banner" class="hidden">Level 2!</p>
+        <p class="score-line"><span id="final-score-label">Final Score: </span><span id="final-score">0</span></p>
+        <p class="high-score-line"><span id="high-score-label">High Score: </span><span id="high-score">0</span></p>
+        <p id="wins-line" class="wins-line">Gardens grown: 0</p>
+        <div class="victory-actions">
+            <button id="btn-continue">NEXT LESSON</button>
+            <button id="btn-retry">RETRY LESSON</button>
+            <button id="btn-restart">RESTART</button>
+        </div>
+    </div>
+
+    <div id="round-loader" class="hidden">
+        <div class="spinner"></div>
+        <p style="color:#6ee7b7;font-weight:700;margin-top:1rem;font-size:0.875rem">...</p>
+    </div>
+
+    <script type="module" src="./game.js"></script>
+</body>
+</html>

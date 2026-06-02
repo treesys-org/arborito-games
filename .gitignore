@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.vite/
+
+# Python (sdk/)
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+*.local
+.env
+.env.*
+!.env.example
+coverage/
+.DS_Store
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*

@@ -1,0 +1,48 @@
+
+[
+  {
+    "id": "classroom-sim",
+    "name": "Classroom Simulator",
+    "icon": "👨‍🏫",
+    "description": "Simulador de aula RPG. Estático con Quiz V2; IA local solo en modo dinámico.",
+    "path": "./cartridges/classroom/index.html",
+    "author": "Arborito Official",
+    "version": "1.0.0"
+  },
+  {
+    "id": "memory-garden",
+    "name": "Memory Garden",
+    "icon": "🧠",
+    "description": "Juego de memoria contextual. Conecta conceptos extraídos de la lección.",
+    "path": "./cartridges/memory/index.html",
+    "author": "Arborito Official",
+    "version": "1.0.0"
+  },
+  {
+    "id": "firstjob",
+    "name": "First Job: Corp Sim",
+    "icon": "💼",
+    "description": "Simulador de trabajo RPG. Gestiona un edificio generado proceduralmente. Atiende llamadas y clientes basándote en el tema de estudio. La IA define tu empresa.",
+    "path": "./cartridges/firstjob/index.html",
+    "author": "Arborito Official",
+    "version": "3.0.0"
+  },
+  {
+    "id": "starship",
+    "name": "Starship Learner",
+    "icon": "🚀",
+    "description": "Explora el currículo como una galaxia. Vuela entre lecciones y aterriza para adquirir conocimiento.",
+    "path": "./cartridges/starship/index.html",
+    "author": "Arborito Official",
+    "version": "1.0.0"
+  },
+  {
+    "id": "alonso-duel",
+    "name": "Duelo vs Alonso",
+    "icon": "🃏",
+    "description": "Batalla de cartas con el cuestionario. Bloquea, ataca, combos y críticos. Primero en 100 puntos gana.",
+    "path": "./cartridges/alonso-duel/index.html",
+    "author": "Arborito Official",
+    "version": "2.0.0"
+  }
+]

@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <link rel="stylesheet" href="/tailwind.css">
+    <title>Starship Learner: Odisea del Conocimiento</title>
+    <style>
+        .hidden { display: none !important; }
+        html {
+            height: 100%;
+            -webkit-text-size-adjust: 100%;
+        }
+        body { 
+            font-family: monospace; 
+            background: #000; 
+            color: white; 
+            user-select: none; 
+            -webkit-user-select: none;
+            margin: 0;
+            width: 100%;
+            min-height: 100%;
+            min-height: 100dvh;
+        }
+        body.in-game {
+            overflow: hidden;
+            touch-action: none;
+            overscroll-behavior: none;
+            position: fixed;
+            inset: 0;
+            height: 100%;
+            height: 100dvh;
+        }
+        #game-canvas {
+            position: fixed;
+            inset: 0;
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            pointer-events: none;
+        }
+        body.in-game #game-canvas {
+            pointer-events: auto;
+        }
+
+        
+        button, #story-dialogue, #dialogue-box, .full-screen, #prologue-screen, #loading-screen {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        
+        .crt::before {
+            content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 5; background-size: 100% 2px, 3px 100%; pointer-events: none; opacity: 0.5;
+        }
+        
+        
+        .ui-layer { position: fixed; pointer-events: none; z-index: 10; inset: 0; width: 100%; height: 100%; }
+        
+        .hud-panel { 
+            position: absolute; 
+            background: rgba(2, 6, 23, 0.85); 
+            border: 1px solid #0ea5e9; 
+            padding: 10px; 
+            border-radius: 8px; 
+            backdrop-filter: blur(6px); 
+            pointer-events: auto; 
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.2);
+            top: max(1rem, env(safe-area-inset-top, 0px));
+            left: max(1rem, env(safe-area-inset-left, 0px));
+            width: 13rem;
+        }
+        .hud-panel-right {
+            left: auto;
+            right: max(1rem, env(safe-area-inset-right, 0px));
+            width: 11rem;
+            border-color: #a78bfa;
+        }
+        .hud-label { font-size: 9px; color: #94a3b8; letter-spacing: 0.12em; text-transform: uppercase; }
+        #hud-vel { font-size: 1.6rem; font-weight: 700; color: #22d3ee; font-family: system-ui, sans-serif; }
+        .stat-bar-bg { height: 3px; width: 100%; background: #1e293b; margin-top: 3px; border-radius: 2px; }
+        .stat-bar-fill { height: 100%; border-radius: 2px; transition: width 0.15s; }
+        #fuel-bar-fill { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        #shield-bar-fill { background: linear-gradient(90deg, #0284c7, #38bdf8); }
+        #hp-bar-fill { background: linear-gradient(90deg, #dc2626, #f87171); }
+        .hud-stat { margin-top: 6px; font-size: 0.75rem; color: #cbd5e1; }
+        #hud-sector { color: #facc15; font-weight: 700; font-size: 0.85rem; }
+
+        
+        #radar-panel {
+            position: absolute;
+            bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+            right: max(1rem, env(safe-area-inset-right, 0px));
+            pointer-events: none;
+        }
+        #radar-canvas {
+            width: 100px; height: 100px;
+            border: 1px solid rgba(14, 165, 233, 0.4);
+            border-radius: 50%;
+            background: rgba(2, 6, 23, 0.7);
+        }
+
+        
+        #quest-panel {
+            position: absolute;
+            top: max(1rem, env(safe-area-inset-top, 0px));
+            right: max(8rem, calc(env(safe-area-inset-right, 0px) + 7rem));
+            background: rgba(2, 6, 23, 0.85);
+            border: 1px solid #22c55e;
+            padding: 8px 12px;
+            border-radius: 8px;
+            backdrop-filter: blur(6px);
+            pointer-events: auto;
+            max-width: 14rem;
+        }
+        #chapter-title { font-size: 0.65rem; color: #22c55e; letter-spacing: 0.1em; }
+        #quest-title { font-size: 0.85rem; font-weight: 700; color: #fff; margin: 4px 0; font-family: system-ui; }
+        #quest-desc { font-size: 0.7rem; color: #94a3b8; }
+        #fragment-count { font-size: 0.75rem; color: #22d3ee; margin-top: 4px; font-weight: 700; }
+
+        
+        #story-dialogue {
+            position: fixed; bottom: 15%; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 640px;
+            background: rgba(2, 6, 23, 0.95);
+            border: 2px solid #a78bfa;
+            box-shadow: 0 0 40px rgba(167, 139, 250, 0.25), inset 0 0 20px rgba(167, 139, 250, 0.08);
+            padding: 20px 24px; z-index: 55; pointer-events: auto;
+            border-radius: 6px; cursor: pointer;
+        }
+        #story-speaker { color: #a78bfa; font-family: system-ui; font-weight: 900; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 8px; }
+        #story-text { font-size: 1.05rem; line-height: 1.5; color: #e2e8f0; min-height: 3rem; }
+        #story-hint { text-align: right; font-size: 9px; color: #a78bfa; margin-top: 10px; opacity: 0.7; }
+
+        
+        #dialogue-box {
+            position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 600px; min-height: 120px;
+            background: rgba(2, 6, 23, 0.95); 
+            border: 2px solid #22c55e;
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.2), inset 0 0 20px rgba(34, 197, 94, 0.1);
+            padding: 20px; display: none; z-index: 50; pointer-events: auto;
+            border-radius: 4px;
+        }
+        #dialogue-speaker { color: #22c55e; font-family: system-ui, sans-serif; font-weight: 900; margin-bottom: 8px; text-transform: uppercase; font-size: 1rem; border-bottom: 1px solid #22c55e; display: inline-block; padding-bottom: 4px; }
+        #dialogue-text { font-size: 1.1rem; line-height: 1.4; color: #fff; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
+        .dialogue-hint { text-align: right; font-size: 10px; color: #22c55e; margin-top: 1rem; opacity: 0.9; }
+        
+        @media (pointer: coarse), (max-width: 768px) {
+            #dialogue-box {
+                top: auto;
+                bottom: max(6px, env(safe-area-inset-bottom, 0px));
+                left: 50%;
+                transform: translateX(-50%);
+                width: calc(100% - 14px);
+                max-width: none;
+                min-height: 0;
+                max-height: min(30dvh, 148px);
+                padding: 8px 10px 10px;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            #dialogue-speaker {
+                font-size: 0.72rem;
+                margin-bottom: 4px;
+                padding-bottom: 2px;
+            }
+            #dialogue-text {
+                font-size: 0.78rem;
+                line-height: 1.32;
+            }
+            .dialogue-hint {
+                font-size: 8px;
+                margin-top: 0.35rem;
+            }
+            #health-bar {
+                width: min(160px, 42vw);
+                height: 12px;
+                top: 12px;
+                left: 12px;
+            }
+            #suit-energy { top: 28px; left: 12px; font-size: 0.65rem; }
+            #ammo-display { top: 44px; left: 12px; font-size: 0.95rem; }
+        }
+        @media (pointer: coarse) and (orientation: landscape) and (max-height: 420px),
+            (max-width: 768px) and (orientation: landscape) and (max-height: 420px) {
+            #dialogue-box {
+                max-height: min(26dvh, 118px);
+                padding: 5px 8px 7px;
+            }
+            #dialogue-text { font-size: 0.7rem; }
+            #health-bar {
+                top: max(10px, env(safe-area-inset-top, 0px));
+                left: max(10px, env(safe-area-inset-left, 0px));
+            }
+            #suit-energy {
+                top: max(26px, calc(env(safe-area-inset-top, 0px) + 16px));
+                left: max(10px, env(safe-area-inset-left, 0px));
+            }
+            #ammo-display {
+                top: max(42px, calc(env(safe-area-inset-top, 0px) + 32px));
+                left: max(10px, env(safe-area-inset-left, 0px));
+            }
+        }
+        
+        #health-bar {
+            width: 200px; height: 16px; background: #0f172a; border: 2px solid #fff;
+            position: absolute;
+            top: max(20px, env(safe-area-inset-top, 0px));
+            left: max(20px, env(safe-area-inset-left, 0px));
+            transform: skewX(-20deg);
+            box-shadow: 0 0 10px rgba(255,255,255,0.3);
+            overflow: hidden;
+        }
+        #health-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #ef4444, #f87171); transition: width 0.2s; }
+        #suit-energy {
+            position: absolute;
+            top: max(40px, calc(env(safe-area-inset-top, 0px) + 20px));
+            left: max(20px, env(safe-area-inset-left, 0px));
+            color: #0ea5e9; font-size: 0.8rem; letter-spacing: 2px;
+        }
+        #ammo-display {
+            position: absolute;
+            top: max(60px, calc(env(safe-area-inset-top, 0px) + 40px));
+            left: max(20px, env(safe-area-inset-left, 0px));
+            font-size: 1.2rem; color: #facc15; font-weight: bold;
+            text-shadow: 0 0 10px rgba(250, 204, 21, 0.8);
+            font-family: system-ui, sans-serif;
+        }
+
+        
+        .full-screen {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            pointer-events: auto;
+            box-sizing: border-box;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            touch-action: pan-y;
+            padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+                max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+        }
+        
+        
+        #loading-screen { justify-content: center; }
+        .loading-title {
+            font-size: clamp(1.75rem, 8vw, 3.75rem);
+            margin-bottom: 1rem;
+            color: #22d3ee;
+            font-weight: 900;
+            font-family: sans-serif;
+            letter-spacing: 0.1em;
+            text-align: center;
+            text-shadow: 0 0 24px rgba(34, 211, 238, 0.45);
+        }
+        .loading-status { font-size: 0.8rem; font-family: monospace; color: #155e75; border: 1px solid #164e63; padding: 0.5rem 1rem; text-align: center; max-width: 90vw; }
+
+        
+        #prologue-screen { background: #020617; text-align: center; }
+        .prologue-content { max-width: 56rem; margin: 0 auto; padding: 1rem 0 1.5rem; width: 100%; flex: 1 0 auto; }
+        .prologue-title {
+            font-size: clamp(2rem, 10vw, 3rem);
+            font-weight: 900;
+            margin-bottom: 0.75rem;
+            font-family: sans-serif;
+            letter-spacing: 0.08em;
+            line-height: 1.05;
+            background: linear-gradient(to bottom, #22d3ee, #2563eb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 15px rgba(34,211,238,0.5));
+        }
+        @media(min-width: 768px) { .prologue-title { font-size: 6rem; } }
+
+        .prologue-subtitle {
+            color: #a78bfa;
+            font-size: clamp(0.65rem, 2.5vw, 0.9rem);
+            letter-spacing: 0.25em;
+            margin-bottom: 1rem;
+        }
+
+        .prologue-text {
+            color: #cbd5e1;
+            font-family: monospace;
+            font-size: clamp(0.8rem, 3.2vw, 1.125rem);
+            margin-bottom: 1.5rem;
+            max-width: 42rem;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.55;
+            text-align: left;
+        }
+        .prologue-text p { margin-bottom: 0.75rem; }
+        
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            text-align: left;
+            background: rgba(15, 23, 42, 0.8);
+            padding: 1rem;
+            border: 1px solid #164e63;
+            box-shadow: 0 0 30px rgba(8,145,178,0.2);
+            margin-top: 1rem;
+        }
+        @media(min-width: 768px) {
+            .controls-grid { grid-template-columns: 1fr 1fr; padding: 1.5rem; gap: 1.5rem; margin-top: 2rem; }
+            .prologue-content { padding: 2.5rem 0; }
+            .prologue-text { margin-bottom: 3rem; }
+        }
+        
+        .control-group-title { font-weight: 700; font-family: sans-serif; display: block; margin-bottom: 0.5rem; padding-bottom: 0.25rem; border-bottom: 1px solid; font-size: 0.85rem; }
+        .title-cyan { color: #22d3ee; border-color: #155e75; }
+        .title-green { color: #4ade80; border-color: #166534; }
+        .control-desc { font-size: 0.8rem; color: #94a3b8; line-height: 1.45; }
+
+        #btn-start {
+            margin-top: 1.5rem;
+            margin-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+            border: 2px solid #06b6d4;
+            color: #06b6d4;
+            background: rgba(2, 6, 23, 0.95);
+            padding: 1rem 2rem;
+            min-height: 3rem;
+            width: min(100%, 22rem);
+            font-weight: 700;
+            font-size: clamp(0.95rem, 4vw, 1.5rem);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            font-family: sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: sticky;
+            bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+            flex-shrink: 0;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            z-index: 2;
+        }
+        #btn-start:hover, #btn-start:active { color: #000; background: #06b6d4; box-shadow: 0 0 30px #0ea5e9; }
+
+        
+        .touch-zone { 
+            position: absolute; z-index: 40; pointer-events: auto; opacity: 0.6; 
+            touch-action: none; transition: opacity 0.2s; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        .touch-zone:active { opacity: 0.9; }
+        
+        
+        #stick-container { 
+            bottom: max(40px, env(safe-area-inset-bottom, 0px));
+            left: max(40px, env(safe-area-inset-left, 0px));
+            width: 140px; height: 140px; 
+            background: rgba(14, 165, 233, 0.1); border-radius: 50%; border: 2px solid rgba(14, 165, 233, 0.3);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.2);
+        }
+        #stick-knob { width: 60px; height: 60px; background: rgba(14, 165, 233, 0.8); border-radius: 50%; box-shadow: 0 0 15px #0ea5e9; transform: translate(0,0); }
+        
+        #btn-land {
+            bottom: max(60px, calc(env(safe-area-inset-bottom, 0px) + 20px));
+            right: max(40px, env(safe-area-inset-right, 0px));
+            width: 90px; height: 90px;
+            background: rgba(34, 197, 94, 0.2); border: 2px solid #22c55e; border-radius: 50%;
+            display: none; align-items: center; justify-content: center; color: #22c55e; font-weight: bold;
+            font-family: system-ui, sans-serif; font-size: 1rem;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+        }
+        #btn-fire {
+            bottom: max(60px, calc(env(safe-area-inset-bottom, 0px) + 20px));
+            right: max(150px, calc(env(safe-area-inset-right, 0px) + 110px));
+            width: 80px; height: 80px;
+            background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; color: #ef4444; font-weight: bold;
+            font-family: system-ui, sans-serif; font-size: 1.1rem;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+        #btn-warp {
+            bottom: max(160px, calc(env(safe-area-inset-bottom, 0px) + 120px));
+            right: max(40px, env(safe-area-inset-right, 0px));
+            width: 70px; height: 70px;
+            background: rgba(167, 139, 250, 0.15); border: 2px solid #a78bfa; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; color: #a78bfa; font-weight: bold;
+            font-family: system-ui, sans-serif; font-size: 0.75rem;
+            box-shadow: 0 0 15px rgba(167, 139, 250, 0.3);
+        }
+
+        
+        #dpad-container {
+            bottom: max(20px, env(safe-area-inset-bottom, 0px));
+            left: max(20px, env(safe-area-inset-left, 0px));
+            display: flex; gap: 10px; align-items: flex-end;
+        }
+        .d-btn { 
+            width: 90px; height: 90px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); 
+            clip-path: polygon(10% 0, 100% 0, 100% 90%, 90% 100%, 0 100%, 0 10%);
+            display: flex; align-items: center; justify-content: center; font-size: 2.5rem;
+            backdrop-filter: blur(4px);
+            user-select: none;
+        }
+        
+        
+        #action-container {
+            bottom: max(30px, env(safe-area-inset-bottom, 0px));
+            right: max(30px, env(safe-area-inset-right, 0px));
+            display: flex; gap: 20px; align-items: flex-end;
+        }
+        .act-btn {
+            width: 90px; height: 90px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-family: system-ui, sans-serif; border: 2px solid rgba(255,255,255,0.5);
+            box-shadow: 0 0 15px rgba(255,255,255,0.2);
+            font-size: 1.8rem;
+            background: rgba(0,0,0,0.5);
+            user-select: none;
+        }
+        #btn-jump { border-color: #0ea5e9; color: #0ea5e9; margin-bottom: 40px; }
+        #btn-shoot { border-color: #ef4444; color: #ef4444; }
+        
+        #btn-interact {
+            position: absolute;
+            bottom: max(180px, calc(env(safe-area-inset-bottom, 0px) + 140px));
+            right: max(40px, env(safe-area-inset-right, 0px));
+            width: 80px; height: 80px;
+            background: rgba(250, 204, 21, 0.2); border-radius: 50%; color: #facc15; font-weight: bold;
+            display: none; align-items: center; justify-content: center; border: 2px solid #facc15;
+            box-shadow: 0 0 20px rgba(250, 204, 21, 0.5);
+            font-size: 1.2rem;
+            z-index: 60;
+        }
+
+        
+        #death-screen {
+            position: fixed; inset: 0; background: rgba(69, 10, 10, 0.9); display: flex; align-items: center; justify-content: center; pointer-events: auto; backdrop-filter: blur(4px); z-index: 100;
+            padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+                max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+            box-sizing: border-box;
+        }
+        .death-box { text-align: center; border: 4px solid #dc2626; padding: clamp(1.25rem, 5vw, 2.5rem); background: #000; width: min(100%, 22rem); }
+        .death-title { font-size: clamp(2rem, 10vw, 3rem); font-weight: 900; color: #ef4444; margin-bottom: 0.75rem; font-family: sans-serif; letter-spacing: -0.05em; line-height: 1; }
+        @media(min-width: 768px) { .death-title { font-size: 4.5rem; } }
+        
+        .death-desc { color: #fecaca; margin-bottom: 1.5rem; font-family: monospace; letter-spacing: 0.08em; font-size: 0.8rem; }
+        
+        #btn-respawn {
+            background: white; color: black; border: 4px solid black; padding: 0.85rem 1.5rem; min-height: 3rem; width: 100%;
+            font-weight: 700; font-family: sans-serif; font-size: 1rem;
+            box-shadow: 6px 6px 0 #000; cursor: pointer; transition: transform 0.1s;
+        }
+        #btn-respawn:hover, #btn-respawn:active { background: #ef4444; color: white; }
+        #btn-respawn:active { transform: scale(0.95); }
+
+        
+        #rotate-warning {
+            display: none;
+            position: fixed;
+            top: max(0.5rem, env(safe-area-inset-top, 0px));
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 200;
+            background: rgba(2, 6, 23, 0.92);
+            color: #22d3ee;
+            border: 1px solid rgba(14, 165, 233, 0.45);
+            border-radius: 999px;
+            font-family: system-ui, sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 0.45rem 0.85rem;
+            pointer-events: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+            white-space: nowrap;
+            max-width: calc(100% - 1.5rem);
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #control-toast {
+            position: fixed;
+            top: max(1rem, env(safe-area-inset-top, 0px));
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 150;
+            background: rgba(2, 6, 23, 0.92);
+            color: #e2e8f0;
+            border: 1px solid rgba(34, 211, 238, 0.6);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 24px rgba(34,211,238,0.15);
+            font-family: system-ui, sans-serif;
+            font-size: 0.78rem;
+            line-height: 1.55;
+            max-width: min(28rem, calc(100% - 1.5rem));
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            opacity: 0;
+        }
+        #control-toast.visible { opacity: 1; }
+        .control-toast-title {
+            color: #22d3ee;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            font-size: 0.7rem;
+            margin-bottom: 0.4rem;
+        }
+        .control-toast-body kbd {
+            display: inline-block;
+            padding: 0.05rem 0.35rem;
+            margin: 0 1px;
+            border: 1px solid rgba(148,163,184,0.55);
+            border-radius: 4px;
+            background: rgba(15,23,42,0.7);
+            color: #f8fafc;
+            font-family: monospace;
+            font-size: 0.7rem;
+        }
+        .control-toast-body { display: grid; grid-template-columns: 1fr; gap: 2px; }
+        @media (min-width: 540px) {
+            .control-toast-body { grid-template-columns: 1fr 1fr; gap: 3px 14px; }
+        }
+        .control-toast-hint {
+            margin-top: 0.5rem;
+            color: #94a3b8;
+            font-size: 0.65rem;
+            letter-spacing: 0.05em;
+            text-align: center;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) {
+            .rotate-icon { animation: none; }
+        }
+
+        
+        /* Hide on-screen controls when a precise pointer is available. */
+        @media (hover: hover) and (pointer: fine) {
+            .touch-zone { display: none !important; }
+        }
+
+        
+        @media (pointer: coarse), (max-width: 768px) {
+            .hud-panel {
+                top: max(0.35rem, env(safe-area-inset-top, 0px));
+                left: max(0.35rem, env(safe-area-inset-left, 0px));
+                width: min(8.5rem, 44vw);
+                padding: 5px 7px;
+                border-radius: 6px;
+            }
+            .hud-panel-right {
+                right: max(0.35rem, env(safe-area-inset-right, 0px));
+                width: min(7rem, 36vw);
+            }
+            .hud-label { font-size: 7px; }
+            #hud-vel { font-size: 1.15rem; }
+            .hud-stat { margin-top: 4px; font-size: 0.62rem; }
+            #hud-sector { font-size: 0.72rem; }
+
+            #quest-panel {
+                top: auto;
+                bottom: max(5.5rem, calc(env(safe-area-inset-bottom, 0px) + 4.5rem));
+                right: max(0.35rem, env(safe-area-inset-right, 0px));
+                left: auto;
+                max-width: min(10rem, 48vw);
+                padding: 6px 8px;
+                font-size: 0.65rem;
+            }
+            #quest-title { font-size: 0.72rem; margin: 2px 0; }
+            #quest-desc, #fragment-count { font-size: 0.62rem; }
+
+            #radar-panel {
+                bottom: max(0.35rem, env(safe-area-inset-bottom, 0px));
+                left: max(0.35rem, env(safe-area-inset-left, 0px));
+                right: auto;
+            }
+            #radar-canvas { width: 72px; height: 72px; }
+
+            #story-dialogue {
+                bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+                width: calc(100% - 12px);
+                max-width: none;
+                padding: 10px 12px;
+            }
+            #story-speaker { font-size: 0.72rem; margin-bottom: 4px; }
+            #story-text { font-size: 0.82rem; min-height: 2.2rem; line-height: 1.4; }
+            #story-hint { font-size: 8px; margin-top: 6px; }
+
+            #stick-container {
+                bottom: max(12px, env(safe-area-inset-bottom, 0px));
+                left: max(12px, env(safe-area-inset-left, 0px));
+                width: 110px;
+                height: 110px;
+            }
+            #stick-knob { width: 48px; height: 48px; }
+
+            #btn-fire {
+                bottom: max(14px, env(safe-area-inset-bottom, 0px));
+                right: max(14px, env(safe-area-inset-right, 0px));
+                width: 64px;
+                height: 64px;
+                font-size: 0.95rem;
+            }
+            #btn-warp {
+                bottom: max(88px, calc(env(safe-area-inset-bottom, 0px) + 74px));
+                right: max(14px, env(safe-area-inset-right, 0px));
+                width: 56px;
+                height: 56px;
+                font-size: 0.62rem;
+            }
+            #btn-land {
+                bottom: max(14px, env(safe-area-inset-bottom, 0px));
+                right: max(86px, calc(env(safe-area-inset-right, 0px) + 72px));
+                width: 64px;
+                height: 64px;
+                font-size: 0.75rem;
+            }
+
+            #dpad-container {
+                bottom: max(10px, env(safe-area-inset-bottom, 0px));
+                left: max(10px, env(safe-area-inset-left, 0px));
+                gap: 8px;
+            }
+            .d-btn { width: 72px; height: 72px; font-size: 2rem; }
+
+            #action-container {
+                bottom: max(12px, env(safe-area-inset-bottom, 0px));
+                right: max(12px, env(safe-area-inset-right, 0px));
+                gap: 12px;
+            }
+            .act-btn { width: 72px; height: 72px; font-size: 1.5rem; }
+            #btn-jump { margin-bottom: 28px; }
+
+            #btn-interact {
+                bottom: max(100px, calc(env(safe-area-inset-bottom, 0px) + 86px));
+                right: max(12px, env(safe-area-inset-right, 0px));
+                width: 64px;
+                height: 64px;
+                font-size: 0.85rem;
+            }
+
+            
+            body.in-game.portrait-hint #rotate-warning { display: block; }
+        }
+
+        @media (orientation: landscape) {
+            #rotate-warning { display: none !important; }
+        }
+
+        @media (pointer: coarse) and (orientation: portrait), (max-width: 768px) and (orientation: portrait) {
+            #quest-panel { display: none; }
+
+            #stick-container { width: 100px; height: 100px; }
+            #btn-warp {
+                bottom: max(78px, calc(env(safe-area-inset-bottom, 0px) + 64px));
+                right: max(12px, env(safe-area-inset-right, 0px));
+            }
+            #btn-land {
+                right: max(78px, calc(env(safe-area-inset-right, 0px) + 64px));
+            }
+        }
+
+        @media (pointer: coarse) and (orientation: landscape) and (max-height: 420px),
+            (max-width: 900px) and (orientation: landscape) and (max-height: 420px) {
+            .hud-panel { width: min(7.5rem, 38vw); padding: 4px 6px; }
+            #hud-vel { font-size: 1rem; }
+            .hud-stat { font-size: 0.58rem; margin-top: 2px; }
+            #quest-panel {
+                top: max(0.3rem, env(safe-area-inset-top, 0px));
+                bottom: auto;
+                right: max(5.5rem, calc(env(safe-area-inset-right, 0px) + 4.5rem));
+                max-width: 9rem;
+                display: block;
+            }
+            #radar-panel { bottom: max(0.3rem, env(safe-area-inset-bottom, 0px)); }
+            #radar-canvas { width: 64px; height: 64px; }
+
+            #stick-container { width: 96px; height: 96px; bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
+            #stick-knob { width: 42px; height: 42px; }
+            #btn-fire, #btn-land { width: 56px; height: 56px; }
+            #btn-warp { width: 50px; height: 50px; bottom: max(72px, calc(env(safe-area-inset-bottom, 0px) + 58px)); }
+
+            #dialogue-box { max-height: min(28dvh, 110px); }
+            #health-bar {
+                top: max(8px, env(safe-area-inset-top, 0px));
+                left: max(8px, env(safe-area-inset-left, 0px));
+                width: min(140px, 38vw);
+                height: 10px;
+            }
+            #suit-energy {
+                top: max(22px, calc(env(safe-area-inset-top, 0px) + 14px));
+                left: max(8px, env(safe-area-inset-left, 0px));
+                font-size: 0.58rem;
+            }
+            #ammo-display {
+                top: max(36px, calc(env(safe-area-inset-top, 0px) + 28px));
+                left: max(8px, env(safe-area-inset-left, 0px));
+                font-size: 0.82rem;
+            }
+            .d-btn { width: 64px; height: 64px; font-size: 1.75rem; }
+            .act-btn { width: 64px; height: 64px; font-size: 1.35rem; }
+        }
+    </style>
+</head>
+<body class="crt">
+
+    <div id="rotate-warning">⟳ Gira el móvil para jugar mejor</div>
+
+    <div id="control-toast" class="hidden">
+        <div class="control-toast-title">CONTROLES</div>
+        <div id="control-toast-body" class="control-toast-body"></div>
+        <div class="control-toast-hint">Pulsa cualquier tecla para cerrar</div>
+    </div>
+
+    <canvas id="game-canvas"></canvas>
+
+    <div id="story-dialogue" class="hidden">
+        <div id="story-speaker">E.D.E.N.</div>
+        <div id="story-text"></div>
+        <div id="story-hint">TOCA PARA CONTINUAR ▶</div>
+    </div>
+
+    <div id="loading-screen" class="full-screen">
+        <div class="loading-title">SYSTEM BOOT</div>
+        <div id="loading-status" class="loading-status">Inicializando sistemas...</div>
+    </div>
+
+    <div id="prologue-screen" class="full-screen hidden">
+        <div class="prologue-content">
+            <h1 class="prologue-title">STARSHIP<br>LEARNER</h1>
+            <p class="prologue-subtitle">ODISEA DEL CONOCIMIENTO</p>
+            <div id="prologue-text" class="prologue-text">
+                <p>Año 2847. El <strong style="color:#a78bfa">Coro del Vacío</strong> ha devorado los Archivos Galácticos, dispersando el saber de civilizaciones enteras.</p>
+                <p>Eres el Capitán de la <strong style="color:#22d3ee">ISS Arborito</strong>. Tu compañera de a bordo <strong style="color:#a78bfa">E.D.E.N.</strong> te guiará a través de sectores hostiles para recuperar los Fragmentos de Datos.</p>
+                <p>Cada planeta es una lección. Cada lección, un arma contra la ignorancia.</p>
+                
+                <div class="controls-grid">
+                    <div>
+                        <span class="control-group-title title-cyan">VUELO ESPACIAL</span>
+                        <span class="control-desc">
+                            <strong>W</strong> / <strong>↑</strong> · <strong>Stick</strong> — Propulsar nave<br>
+                            <strong>A</strong> / <strong>D</strong> · <strong>← →</strong> — Girar<br>
+                            <strong>Shift</strong> — Warp (gasta combustible)<br>
+                            <strong>Z</strong> / <strong>J</strong> / <strong>F</strong> · 🔫 — Disparar cañones<br>
+                            <strong>Space</strong> · LAND — Aterrizar al estar cerca de un planeta
+                        </span>
+                    </div>
+                    <div>
+                        <span class="control-group-title title-green">SUPERFICIE DEL PLANETA</span>
+                        <span class="control-desc">
+                            <strong>A</strong> / <strong>D</strong> · <strong>← →</strong> — Caminar<br>
+                            <strong>W</strong> / <strong>↑</strong> · <strong>Space</strong> — Saltar<br>
+                            <strong>Z</strong> / <strong>J</strong> / <strong>F</strong> — Disparar bláster<br>
+                            <strong>E</strong> / <strong>↑</strong> · <strong>Enter</strong> — Hablar / Interactuar<br>
+                            Recupera 3 cristales y derrota al jefe
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <button id="btn-start">
+                <span>INICIAR ODISEA</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="ui-space" class="ui-layer hidden">
+        <div class="hud-panel">
+            <div class="hud-label">Velocidad</div>
+            <div id="hud-vel">0 km/s</div>
+            <div class="stat-bar-bg"><div id="vel-bar-fill" class="stat-bar-fill" style="width:0%;background:#0ea5e9"></div></div>
+            <div class="hud-stat">⛽ Combustible: <span id="hud-fuel">100%</span></div>
+            <div class="stat-bar-bg"><div id="fuel-bar-fill" class="stat-bar-fill"></div></div>
+            <div class="hud-stat">🛡 Escudo: <span id="hud-shield">100%</span></div>
+            <div class="stat-bar-bg"><div id="shield-bar-fill" class="stat-bar-fill"></div></div>
+            <div class="hud-stat">❤ Casco: <span id="hud-hp">100%</span></div>
+            <div class="stat-bar-bg"><div id="hp-bar-fill" class="stat-bar-fill"></div></div>
+        </div>
+
+        <div class="hud-panel hud-panel-right">
+            <div class="hud-label">Sector</div>
+            <div id="hud-sector">SECTOR ALFA</div>
+        </div>
+
+        <div id="quest-panel">
+            <div id="chapter-title">Cap. 1</div>
+            <div id="quest-title">Despertar en el Abismo</div>
+            <div id="quest-desc">Recupera fragmentos de datos</div>
+            <div id="fragment-count">0/0</div>
+        </div>
+
+        <div id="radar-panel">
+            <canvas id="radar-canvas" width="100" height="100"></canvas>
+        </div>
+
+        <div id="stick-container" class="touch-zone">
+            <div id="stick-knob"></div>
+        </div>
+        <div id="btn-fire" class="touch-zone">🔫</div>
+        <div id="btn-warp" class="touch-zone">WARP</div>
+        <div id="btn-land" class="touch-zone">LAND</div>
+    </div>
+
+    <div id="ui-planet" class="ui-layer hidden">
+        <div id="health-bar"><div id="health-fill"></div></div>
+        <div id="suit-energy">INTEGRIDAD DEL TRAJE</div>
+        <div id="ammo-display">MUNICIÓN: 0</div>
+        
+        <div id="dialogue-box">
+            <div id="dialogue-speaker">MARCIANO</div>
+            <div id="dialogue-text">...</div>
+            <div class="dialogue-hint">TOCA PARA CONTINUAR ▶</div>
+        </div>
+
+        <div id="btn-interact" class="touch-zone">TALK</div>
+
+        <div id="dpad-container" class="touch-zone">
+            <div id="btn-left" class="d-btn">←</div>
+            <div id="btn-right" class="d-btn">→</div>
+        </div>
+        <div id="action-container" class="touch-zone">
+            <div id="btn-shoot" class="act-btn">Z</div>
+            <div id="btn-jump" class="act-btn">A</div>
+        </div>
+
+        <div id="death-screen" class="hidden">
+            <div class="death-box">
+                <h2 class="death-title">FALLO<br>CRÍTICO</h2>
+                <p class="death-desc">INTEGRIDAD DEL TRAJE PERDIDA</p>
+                <button id="btn-respawn">REINICIAR SISTEMA</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./game.js"></script>
+</body>
+</html>

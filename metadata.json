@@ -1,0 +1,5 @@
+{
+  "name": "arborito-games",
+  "description": "A collection of decentralized, context-aware educational minigames. These games use Generative AI (LLMs) to dynamically read any Arborito knowledge tree and instantly transform static text lessons into interactive game mechanics",
+  "requestFramePermissions": []
+}

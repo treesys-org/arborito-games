@@ -1,0 +1,47 @@
+[
+    {
+        "id": "alonso-duel",
+        "name": "Duelo vs Alonso",
+        "description": "Batalla de cartas con el cuestionario de las lecciones. Bloquea, ataca, combos y repaso SRS. Primero en 100 puntos gana.",
+        "icon": "\ud83c\udccf",
+        "path": "./cartridges/alonso-duel/index.html",
+        "version": "2.0.0",
+        "author": "Arborito Official"
+    },
+    {
+        "id": "classroom",
+        "name": "Classroom Simulator",
+        "description": "Simulador de aula RPG. Modo est\u00e1tico con cuestionarios del autor; IA local solo en modo din\u00e1mico (opt-in).",
+        "icon": "\ud83d\udc68\u200d\ud83c\udfeb",
+        "path": "./cartridges/classroom/index.html",
+        "version": "1.0.0",
+        "author": "Arborito Official"
+    },
+    {
+        "id": "firstjob",
+        "name": "First Job: Corp Sim",
+        "description": "Simulador de trabajo RPG. Recibe llamadas al m\u00f3vil, sube a los pisos indicados y gestiona tu estr\u00e9s comprando comida en la cafeter\u00eda.",
+        "icon": "\ud83d\udcbc",
+        "path": "./cartridges/firstjob/index.html",
+        "version": "3.2.0",
+        "author": "Arborito Official"
+    },
+    {
+        "id": "memory",
+        "name": "Memory Garden: Overgrowth",
+        "description": "Una experiencia arcade visual. Empareja conceptos para cultivar un jard\u00edn procedural en tiempo real. Sistema de combos y audio sint\u00e9tico.",
+        "icon": "\ud83c\udf3a",
+        "path": "./cartridges/memory/index.html",
+        "version": "2.0.0",
+        "author": "Arborito Official"
+    },
+    {
+        "id": "starship",
+        "name": "Starship Learner",
+        "description": "Explora el curr\u00edculo como una galaxia. Vuela entre lecciones y aterriza para adquirir conocimiento.",
+        "icon": "\ud83d\ude80",
+        "path": "./cartridges/starship/index.html",
+        "version": "1.0.0",
+        "author": "Arborito Official"
+    }
+]

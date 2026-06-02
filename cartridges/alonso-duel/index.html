@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<link rel="stylesheet" href="/tailwind.css">
+<title>Duelo vs Alonso</title>
+<style>
+html,body{height:100%;margin:0}
+html{font-size:clamp(15px,0.6vw + 13px,19px)}
+body{
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:#03020a;color:#f8fafc;overflow:hidden;user-select:none;
+}
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+#app{display:flex;flex-direction:column;height:100dvh;position:relative;overflow:hidden;z-index:1}
+#app.hidden,.overlay.hidden{display:none!important}
+
+#duel-shake-root{flex:1;min-height:0;display:flex;flex-direction:column;position:relative}
+#duel-shake-root.is-shake{animation:shake .38s ease}
+#duel-shake-root.is-shake-heavy{animation:shakeHeavy .48s ease}
+@keyframes shake{0%,100%{transform:translate(0)}20%{transform:translate(-4px,2px)}40%{transform:translate(4px,-2px)}60%{transform:translate(-3px,-1px)}80%{transform:translate(3px,1px)}}
+@keyframes shakeHeavy{0%,100%{transform:translate(0)}15%{transform:translate(-7px,3px)}30%{transform:translate(7px,-4px)}50%{transform:translate(-5px,2px)}70%{transform:translate(6px,-2px)}}
+
+.hud-top{
+  display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+  padding:.35rem .55rem 0;flex-shrink:0;position:relative;z-index:5;
+}
+.round-badge{
+  font-size:.55rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+  color:#cbd5e1;background:rgba(0,0,0,.45);border:1px solid rgba(148,163,184,.25);
+  padding:.18rem .45rem;border-radius:.3rem;
+}
+.shield-badge{
+  font-size:.55rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+  color:#64748b;background:rgba(0,0,0,.35);border:1px solid rgba(148,163,184,.2);
+  padding:.18rem .45rem;border-radius:.3rem;opacity:.45;transition:opacity .25s,box-shadow .25s;
+}
+.shield-badge.is-active{
+  opacity:1;color:#6ee7b7;border-color:rgba(52,211,153,.55);
+  box-shadow:0 0 12px rgba(52,211,153,.35);animation:shieldPulse 1.4s ease infinite;
+}
+@keyframes shieldPulse{50%{filter:brightness(1.2)}}
+.review-due-chip{
+  font-size:.48rem;font-weight:800;color:#fde68a;background:rgba(120,53,15,.45);
+  border:1px solid rgba(251,191,36,.35);padding:.12rem .38rem;border-radius:.25rem;
+}
+.special-meter-wrap{flex:1;max-width:9rem;display:flex;align-items:center;gap:.35rem}
+.special-meter-label{font-size:.48rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.special-meter{
+  flex:1;height:.45rem;border-radius:99px;background:rgba(0,0,0,.5);
+  border:1px solid rgba(255,255,255,.12);overflow:hidden;
+}
+.special-meter-fill{
+  height:100%;width:0;border-radius:99px;transition:width .35s ease;
+  background:linear-gradient(90deg,#7c3aed,#fde047);
+  box-shadow:0 0 10px rgba(253,224,71,.45);
+}
+.special-meter-wrap.is-ready .special-meter-fill{animation:meterPulse 1s ease infinite}
+@keyframes meterPulse{50%{filter:brightness(1.35)}}
+.crit-hint{
+  font-size:.5rem;font-weight:900;color:#1c1917;background:linear-gradient(180deg,#fde047,#ca8a04);
+  padding:.12rem .4rem;border-radius:.25rem;border:1px solid #78350f;letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.crit-hint.hidden{display:none!important}
+.hud-deck-chips{display:flex;align-items:center;gap:.35rem;margin-left:auto;margin-right:.35rem}
+.hud-chip{
+  font-size:.52rem;font-weight:800;padding:.14rem .38rem;border-radius:.25rem;
+  background:rgba(0,0,0,.45);border:1px solid rgba(148,163,184,.25);color:#cbd5e1;white-space:nowrap;
+}
+.hud-chip em{font-style:normal;color:#fde68a;font-weight:900}
+.btn-rules{
+  flex-shrink:0;width:1.65rem;height:1.65rem;border-radius:99px;border:2px solid rgba(251,191,36,.45);
+  background:rgba(0,0,0,.5);color:#fde68a;font-weight:900;font-size:.72rem;cursor:pointer;
+  line-height:1;padding:0;
+}
+.btn-rules:active{transform:scale(.95)}
+
+.duel-table{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;z-index:1;overflow:hidden}
+.duel-mat{
+  position:absolute;inset:2% 3% 4%;pointer-events:none;z-index:0;
+  border-radius:50% / 38%;
+  background:
+    radial-gradient(ellipse 85% 70% at 50% 48%,rgba(88,28,135,.35),rgba(15,8,35,.92) 72%),
+    radial-gradient(ellipse 100% 80% at 50% 50%,rgba(124,58,237,.18),transparent 60%),
+    linear-gradient(175deg,rgba(30,27,75,.6),rgba(3,2,10,.95));
+  box-shadow:inset 0 0 80px rgba(0,0,0,.65),inset 0 4px 24px rgba(167,139,250,.12),0 0 60px rgba(124,58,237,.15);
+}
+.duel-mat::before{content:'';position:absolute;inset:4% 6% 8%;border:2px solid rgba(212,175,55,.28);border-radius:50% / 42%;box-shadow:inset 0 0 100px rgba(0,0,0,.5),0 0 30px rgba(251,191,36,.06)}
+.duel-mat::after{content:'';position:absolute;left:10%;right:10%;top:50%;height:2px;background:linear-gradient(90deg,transparent,rgba(251,191,36,.35),transparent);transform:translateY(-50%);opacity:.7}
+.duel-mat.is-review::before{border-color:rgba(251,191,36,.42);box-shadow:inset 0 0 70px rgba(120,53,15,.3),0 0 24px rgba(251,191,36,.1)}
+
+.fighter-bar{display:flex;align-items:center;gap:.5rem;margin:0 .55rem .25rem;position:relative;z-index:3}
+.fighter-bar--flip{flex-direction:row-reverse}
+.fighter-portrait{
+  width:3rem;height:3rem;border-radius:50%;flex-shrink:0;
+  border:3px solid #d4af37;overflow:hidden;background:#1e1538;
+  box-shadow:0 6px 20px rgba(0,0,0,.55),0 0 16px rgba(251,191,36,.15);
+  transition:transform .25s ease,box-shadow .25s ease;
+}
+.alonso-portrait{
+  border-color:#f97316;width:3.35rem;height:3.35rem;
+  box-shadow:0 6px 22px rgba(0,0,0,.55),0 0 20px rgba(249,115,22,.25);
+}
+.fighter-portrait svg{display:block;width:100%;height:100%}
+.fighter-meta{flex:1;min-width:0}
+.fighter-name{font-size:.66rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8}
+.fighter-bar--flip .fighter-name{text-align:right}
+.hp-wrap{margin-top:.25rem}
+.hp-bar{height:.6rem;border-radius:99px;background:rgba(0,0,0,.5);overflow:hidden;border:1px solid rgba(255,255,255,.12);box-shadow:inset 0 2px 4px rgba(0,0,0,.4)}
+.hp-fill{height:100%;border-radius:99px;transition:width .55s cubic-bezier(.22,.61,.36,1),filter .25s ease}
+.hp-fill--you{background:linear-gradient(90deg,#047857,#34d399,#6ee7b7)}
+.hp-fill--foe{background:linear-gradient(90deg,#b91c1c,#f97316,#fcd34d)}
+.hp-fill.hp-pulse{animation:hpPulse .45s ease}
+@keyframes hpPulse{0%{filter:brightness(1)}40%{filter:brightness(1.45)}100%{filter:brightness(1)}}
+.hp-nums{display:flex;justify-content:space-between;align-items:center;font-size:.7rem;font-weight:800;margin-top:.2rem;color:#e2e8f0}
+.fighter-bar--flip .hp-nums{flex-direction:row-reverse}
+.hp-nums .hp-cap{opacity:.55;font-weight:600}
+
+.phase-strip{flex-shrink:0;padding:.2rem .5rem 0;text-align:center;position:relative;z-index:8}
+.phase-banner{
+  font-family:Georgia,'Times New Roman',serif;font-size:.64rem;font-weight:900;
+  letter-spacing:.1em;text-transform:uppercase;color:#fde68a;
+  padding:.24rem .55rem;border-radius:.35rem;
+  background:rgba(0,0,0,.65);border:1px solid rgba(251,191,36,.35);
+  margin:0 auto;display:inline-block;max-width:100%;line-height:1.25;
+}
+.phase-banner.is-flash{animation:phaseFlash .55s ease}
+@keyframes phaseFlash{from{transform:scale(.96);opacity:.7}to{transform:none;opacity:1}}
+.phase-banner.is-alonso{border-color:rgba(251,146,60,.55);color:#fdba74}
+.phase-banner.is-you{border-color:rgba(52,211,153,.55);color:#6ee7b7}
+.table-hint{
+  font-family:monospace;font-size:.6rem;color:#cbd5e1;letter-spacing:.05em;
+  text-align:center;margin:.25rem auto 0;line-height:1.35;min-height:.95rem;max-width:30rem;
+}
+
+#float-layer{position:absolute;inset:0;pointer-events:none;z-index:40;overflow:hidden}
+#event-banner-stack{
+  position:absolute;top:2.6rem;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:.3rem;
+  pointer-events:none;z-index:42;width:max-content;max-width:calc(100% - 1.2rem);
+}
+.event-banner{
+  font-family:Georgia,'Times New Roman',serif;font-size:.78rem;font-weight:900;
+  letter-spacing:.08em;text-transform:uppercase;color:#fed7aa;
+  background:linear-gradient(180deg,rgba(124,45,18,.95),rgba(67,20,7,.95));
+  border:2px solid rgba(251,146,60,.7);border-radius:.45rem;
+  padding:.4rem .85rem;box-shadow:0 8px 22px rgba(0,0,0,.55),0 0 18px rgba(249,115,22,.35);
+  display:inline-flex;align-items:center;gap:.45rem;white-space:nowrap;
+  animation:eventBannerIn .35s cubic-bezier(.34,1.4,.64,1),eventBannerOut .4s ease 1.55s forwards;
+  text-shadow:0 1px 4px rgba(0,0,0,.85);max-width:100%;
+}
+.event-banner-icon{font-size:1.05rem;line-height:1}
+.event-banner-text{overflow:hidden;text-overflow:ellipsis}
+.event-banner.is-foe{color:#fed7aa;border-color:rgba(251,146,60,.7);background:linear-gradient(180deg,rgba(124,45,18,.95),rgba(67,20,7,.95))}
+.event-banner.is-you{color:#a7f3d0;border-color:rgba(52,211,153,.65);background:linear-gradient(180deg,rgba(6,78,59,.95),rgba(2,44,34,.95));box-shadow:0 8px 22px rgba(0,0,0,.55),0 0 18px rgba(52,211,153,.35)}
+.event-banner.is-crit{color:#fef08a;border-color:rgba(253,224,71,.75);background:linear-gradient(180deg,rgba(120,53,15,.95),rgba(67,20,7,.95));box-shadow:0 8px 22px rgba(0,0,0,.55),0 0 22px rgba(253,224,71,.45)}
+.event-banner.is-shield{color:#bae6fd;border-color:rgba(56,189,248,.7);background:linear-gradient(180deg,rgba(7,89,133,.95),rgba(8,47,73,.95))}
+@keyframes eventBannerIn{from{opacity:0;transform:translateY(-14px) scale(.85)}to{opacity:1;transform:none}}
+@keyframes eventBannerOut{to{opacity:0;transform:translateY(-10px) scale(.95)}}
+@media(max-width:639px){
+  .event-banner{font-size:.66rem;padding:.32rem .65rem;letter-spacing:.06em}
+  .event-banner-icon{font-size:.92rem}
+  #event-banner-stack{top:2.2rem}
+}
+.dmg-float{
+  position:absolute;bottom:42%;font-family:Georgia,'Times New Roman',serif;
+  font-size:1.45rem;font-weight:900;text-shadow:0 2px 10px rgba(0,0,0,.85);
+  animation:dmgRise 1s ease forwards;
+}
+.dmg-float--you{color:#6ee7b7}
+.dmg-float--alonso{color:#fb923c}
+.dmg-float--crit{color:#fde047;font-size:1.65rem;text-shadow:0 0 16px rgba(253,224,71,.8)}
+@keyframes dmgRise{from{opacity:0;transform:translateY(12px) scale(.8)}30%{opacity:1;transform:translateY(0) scale(1.15)}to{opacity:0;transform:translateY(-42px) scale(1)}}
+.spark{position:absolute;width:6px;height:6px;border-radius:50%;pointer-events:none;animation:sparkFly .65s ease-out forwards}
+@keyframes sparkFly{from{opacity:1;transform:translate(0,0) scale(1)}to{opacity:0;transform:translate(var(--sx,0),var(--sy,0)) scale(.3)}}
+</style>
+<style>
+/* ==================================================================
+ * Shared central pool — 5 cards always face up. The pool grows from
+ * pile to spread on wider viewports; on phones it stays tight enough
+ * for a five-card row to fit without horizontal scroll.
+ * ================================================================== */
+.battle-stage{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex:1;min-height:0;padding:.35rem .55rem .25rem;position:relative;z-index:4;gap:.45rem;
+}
+.battle-slot{
+  width:100%;max-width:min(100%,22rem);min-height:0;
+  display:flex;align-items:center;justify-content:center;
+  perspective:1200px;
+}
+.battle-slot:not(.has-card){min-height:0;padding:0}
+.battle-slot.has-card{padding:.2rem 0}
+
+.table-pool{
+  display:flex;align-items:flex-end;justify-content:center;gap:.35rem;
+  flex:0 0 auto;width:100%;padding:.25rem .35rem;
+  flex-wrap:nowrap;
+}
+.table-card{
+  flex:1 1 0;max-width:7rem;min-width:3.6rem;aspect-ratio:2/3;
+  padding:0;border:none;background:transparent;cursor:pointer;
+  position:relative;border-radius:.55rem;
+  animation:cardDealIn .45s ease backwards;transform-origin:center bottom;
+  transition:transform .15s ease,box-shadow .15s ease,opacity .2s;
+  font:inherit;color:inherit;
+}
+.table-card:disabled{cursor:default}
+.table-card-frame{
+  width:100%;height:100%;padding:3px;border-radius:.55rem;
+  background:linear-gradient(145deg,#fef9c3 0%,#eab308 38%,#92400e 100%);
+  box-shadow:0 8px 18px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.25);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.table-card.is-review .table-card-frame{background:linear-gradient(145deg,#fef08a,#eab308 35%,#713f12)}
+.table-card.is-master .table-card-frame{background:linear-gradient(145deg,#e9d5ff,#a78bfa 40%,#4c1d95)}
+.table-card.is-fading .table-card-frame{opacity:.78}
+.table-card-frame.is-placeholder{
+  background:linear-gradient(145deg,rgba(148,163,184,.15),rgba(15,23,42,.5));
+  border:2px dashed rgba(148,163,184,.25);box-shadow:none;
+}
+.table-card--empty{cursor:default;opacity:.55;pointer-events:none}
+.table-card-art{
+  height:1.4rem;border-radius:.35rem .35rem 0 0;margin:2px 2px 0;
+  background:linear-gradient(160deg,rgba(124,58,237,.7),rgba(15,23,42,.92));
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.table-card-glyph{font-family:Georgia,'Times New Roman',serif;font-size:.95rem;font-weight:900;color:rgba(255,255,255,.92)}
+.table-card-body{
+  flex:1;background:linear-gradient(168deg,#1e1b4b,#0f172a);border-radius:0 0 .45rem .45rem;
+  margin:0 2px 2px;padding:.3rem .35rem .35rem;display:flex;flex-direction:column;gap:.18rem;
+  min-height:0;overflow:hidden;
+}
+.table-card-top{display:flex;align-items:center;justify-content:space-between;gap:.25rem}
+.table-card-mode{
+  font-size:.42rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:#c4b5fd;
+  padding:.05rem .2rem;border-radius:.18rem;background:rgba(124,58,237,.25);
+}
+.table-card-atk{
+  font-size:.55rem;font-weight:900;color:#86efac;background:rgba(0,0,0,.45);
+  padding:.05rem .25rem;border-radius:.2rem;
+}
+.table-card-q{
+  font-size:.52rem;font-weight:600;color:#e2e8f0;line-height:1.3;margin:0;
+  display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;
+}
+.table-card-tags{display:flex;gap:.15rem;flex-wrap:wrap;min-height:.28rem;margin-top:auto}
+.table-card-key{
+  position:absolute;bottom:.18rem;right:.22rem;font-size:.45rem;font-weight:900;color:#fde68a;
+  background:rgba(0,0,0,.5);padding:.03rem .22rem;border-radius:.18rem;
+}
+.table-card:not(:disabled):hover .table-card-frame{box-shadow:0 0 0 2px #fde047,0 10px 22px rgba(251,191,36,.45)}
+.table-card:not(:disabled):active{transform:translateY(2px)}
+.table-card.is-alonso-pick .table-card-frame{
+  box-shadow:0 0 0 3px #fb923c,0 12px 24px rgba(251,146,60,.55);
+  animation:pickPulse .55s ease infinite;
+}
+@keyframes pickPulse{50%{box-shadow:0 0 0 3px #fde047,0 12px 24px rgba(253,224,71,.5)}}
+@keyframes cardDealIn{from{opacity:0;transform:translateY(16px) rotate(-6deg) scale(.92)}to{opacity:1;transform:none}}
+
+@media(max-width:639px){
+  .table-card{min-width:3rem;max-width:5.4rem}
+  .table-card-q{font-size:.5rem;-webkit-line-clamp:4}
+  .table-card-key{font-size:.42rem}
+}
+
+.play-card{
+  width:100%;border-radius:.65rem;position:relative;
+  background:linear-gradient(145deg,#fef9c3 0%,#eab308 38%,#92400e 100%);
+  box-shadow:0 14px 36px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.35);
+  animation:cardEnter .45s cubic-bezier(.34,1.3,.64,1);
+}
+.play-card.is-foe{
+  background:linear-gradient(145deg,#fed7aa 0%,#f97316 38%,#7c2d12 100%);
+  box-shadow:0 14px 36px rgba(0,0,0,.55),0 0 22px rgba(251,146,60,.28),inset 0 1px 0 rgba(255,255,255,.3);
+}
+.play-card.is-mode-recall{background:linear-gradient(145deg,#bbf7d0 0%,#22c55e 40%,#14532d 100%)}
+.play-card.is-mode-cloze{background:linear-gradient(145deg,#bae6fd 0%,#0284c7 40%,#0c4a6e 100%)}
+.play-card.is-mode-chips{background:linear-gradient(145deg,#fed7aa 0%,#fb923c 40%,#7c2d12 100%)}
+.play-card.is-mode-steps{background:linear-gradient(145deg,#fbcfe8 0%,#ec4899 40%,#831843 100%)}
+@keyframes cardEnter{from{opacity:0;transform:translateY(14px) scale(.92)}to{opacity:1;transform:none}}
+.play-card-frame{padding:5px;border-radius:.6rem}
+.play-card-art{
+  height:2.2rem;border-radius:.35rem .35rem 0 0;margin-bottom:.35rem;
+  background:linear-gradient(135deg,rgba(124,58,237,.55),rgba(15,23,42,.85));
+  border-bottom:1px solid rgba(255,255,255,.12);
+  display:flex;align-items:center;justify-content:center;
+}
+.play-card-glyph{font-family:Georgia,'Times New Roman',serif;font-size:1.2rem;font-weight:900;color:rgba(255,255,255,.85)}
+.play-card-inner{
+  border-radius:.45rem;padding:.55rem .6rem .65rem;
+  background:linear-gradient(168deg,#2d1b4e 0%,#0f172a 100%);
+  border:1px solid rgba(255,255,255,.14);
+}
+.play-card-header{display:flex;align-items:center;justify-content:space-between;gap:.35rem;margin-bottom:.35rem;min-height:1.1rem}
+.play-card-tags{display:flex;align-items:center;gap:.2rem;flex-wrap:wrap}
+.play-card-mode-badge{
+  font-size:.5rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;
+  color:#c4b5fd;padding:.1rem .3rem;border-radius:.2rem;background:rgba(124,58,237,.25);
+}
+.play-card-badge{
+  display:inline-block;font-size:.46rem;font-weight:900;letter-spacing:.06em;
+  text-transform:uppercase;padding:.1rem .32rem;border-radius:.2rem;
+  background:rgba(251,191,36,.22);color:#fde68a;border:1px solid rgba(251,191,36,.4);
+}
+.play-card-badge--review{background:rgba(251,191,36,.28);color:#fef08a}
+.play-card-badge--master{background:rgba(167,139,250,.35);color:#e9d5ff;border-color:rgba(167,139,250,.5)}
+.play-card-badge--fading{background:rgba(148,163,184,.25);color:#cbd5e1;border-color:rgba(148,163,184,.4)}
+.play-card-atk{
+  font-size:.78rem;font-weight:900;color:#fcd34d;line-height:1;
+  background:rgba(0,0,0,.4);padding:.12rem .38rem;border-radius:.25rem;border:1px solid rgba(251,191,36,.35);
+}
+.play-card-q{
+  font-size:.78rem;font-weight:600;color:#f1f5f9;margin:0;line-height:1.4;
+  padding:.45rem;border-radius:.35rem;background:rgba(0,0,0,.38);border:1px solid rgba(255,255,255,.06);
+}
+.opts{display:grid;gap:.35rem;margin-top:.4rem}
+.opt-btn{
+  text-align:left;padding:.65rem .65rem;border-radius:.4rem;
+  border:2px solid #475569;background:linear-gradient(180deg,#1e293b,#0f172a);
+  color:#f8fafc;font-size:.8rem;font-weight:600;cursor:pointer;transition:transform .12s,border-color .12s;
+}
+.opt-btn kbd{
+  display:inline-block;min-width:1.1rem;text-align:center;margin-right:.35rem;
+  padding:.05rem .25rem;border-radius:.2rem;background:rgba(255,255,255,.12);
+  font-size:.58rem;font-weight:900;color:#cbd5e1;
+}
+.opt-btn:active:not(:disabled){transform:scale(.98)}
+.opt-btn:disabled{opacity:.6;cursor:default}
+.opt-btn.correct{border-color:#34d399;background:linear-gradient(180deg,#065f46,#064e3b);box-shadow:0 0 12px rgba(52,211,153,.35)}
+.opt-btn.wrong{border-color:#f87171;background:linear-gradient(180deg,#7f1d1d,#450a0a)}
+.opt-btn.alonso-pick{outline:3px solid #fb923c;animation:optPulse .55s ease infinite}
+@keyframes optPulse{50%{outline-color:#fde047;box-shadow:0 0 14px rgba(251,191,36,.4)}}
+
+.seq-wrap{margin-top:.4rem}
+.seq-hint{font-size:.7rem;color:#cbd5e1;margin:0 0 .3rem;line-height:1.35}
+.seq-picked{font-size:.66rem;color:#fde68a;margin-bottom:.3rem;min-height:1rem}
+.seq-picked-val{font-weight:700}
+.seq-chips{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.35rem}
+.seq-chip{
+  padding:.5rem .6rem;border-radius:.4rem;border:2px solid #6366f1;
+  background:linear-gradient(180deg,#312e81,#1e1b4b);color:#e0e7ff;
+  font-size:.74rem;font-weight:700;cursor:pointer;
+}
+.seq-chip:disabled{opacity:.45;cursor:default}
+.seq-chip.is-picked{opacity:.35;border-color:#334155}
+.seq-submit{
+  width:100%;padding:.6rem;border:none;border-radius:.4rem;
+  background:linear-gradient(180deg,#8b5cf6,#5b21b6);color:#fff;
+  font-weight:800;font-size:.78rem;cursor:pointer;
+}
+.seq-chip.alonso-pick{outline:3px solid #fb923c;animation:optPulse .55s ease infinite}
+
+.block-timer{position:absolute;top:-.55rem;right:-.55rem;width:2.4rem;height:2.4rem;z-index:3}
+.block-timer.hidden{display:none}
+.block-timer svg{width:100%;height:100%;transform:rotate(-90deg)}
+.block-timer-track{fill:none;stroke:rgba(0,0,0,.45);stroke-width:4}
+.block-timer-fill{fill:none;stroke:#34d399;stroke-width:4;stroke-linecap:round;stroke-dasharray:94.25;stroke-dashoffset:0;transition:stroke .3s}
+.block-timer.is-urgent .block-timer-fill{stroke:#f87171}
+.block-timer-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:900;color:#fde68a}
+
+.alonso-portrait{transition:transform .3s ease,box-shadow .3s ease}
+.alonso-portrait[data-mood="thinking"]{animation:alonsoBob 1.4s ease-in-out infinite}
+.alonso-portrait[data-mood="smug"]{transform:scale(1.05) rotate(-3deg);box-shadow:0 6px 22px rgba(0,0,0,.55),0 0 26px rgba(251,191,36,.45)}
+.alonso-portrait[data-mood="hurt"]{animation:alonsoHurt .55s ease}
+.alonso-portrait[data-mood="victorious"]{transform:scale(1.12);box-shadow:0 6px 22px rgba(0,0,0,.55),0 0 32px rgba(251,191,36,.85)}
+@keyframes alonsoBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes alonsoHurt{0%{transform:translate(0)}25%{transform:translate(-6px,4px) rotate(-4deg)}50%{transform:translate(6px,-2px) rotate(4deg)}75%{transform:translate(-3px,2px) rotate(-2deg)}100%{transform:translate(0)}}
+.alonso-portrait[data-mood="idle"] .alonso-eyes-open{opacity:1}
+.alonso-portrait[data-mood="thinking"] .alonso-eyes-open{opacity:0}
+.alonso-portrait[data-mood="thinking"] .alonso-eyes-think{opacity:1}
+.alonso-portrait[data-mood="thinking"] .alonso-think-bubble{opacity:1;animation:thinkPulse 1.2s ease-in-out infinite}
+.alonso-portrait[data-mood="smug"] .alonso-mouth-idle{opacity:0}
+.alonso-portrait[data-mood="smug"] .alonso-mouth-smug{opacity:1}
+.alonso-portrait[data-mood="smug"] .alonso-brows{opacity:1}
+.alonso-portrait[data-mood="hurt"] .alonso-mouth-idle,.alonso-portrait[data-mood="hurt"] .alonso-mouth-smug{opacity:0}
+.alonso-portrait[data-mood="hurt"] .alonso-mouth-hurt{opacity:1}
+.alonso-portrait[data-mood="hurt"] .alonso-eyes-open{opacity:0}
+.alonso-portrait[data-mood="hurt"] .alonso-eyes-hurt{opacity:1}
+.alonso-portrait[data-mood="victorious"] .alonso-brows{opacity:1}
+.alonso-portrait[data-mood="victorious"] .alonso-mouth-idle{opacity:0}
+.alonso-portrait[data-mood="victorious"] .alonso-mouth-smug{opacity:1}
+@keyframes thinkPulse{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+
+.player-portrait[data-mood="focus"]{box-shadow:0 6px 20px rgba(0,0,0,.55),0 0 22px rgba(52,211,153,.45);transform:scale(1.04)}
+.player-portrait[data-mood="happy"]{box-shadow:0 6px 20px rgba(0,0,0,.55),0 0 22px rgba(253,224,71,.4)}
+.player-portrait[data-mood="hurt"]{animation:playerHurt .45s ease;border-color:#f87171}
+.player-portrait[data-mood="victory"]{transform:scale(1.1);box-shadow:0 6px 24px rgba(0,0,0,.55),0 0 28px rgba(52,211,153,.55)}
+@keyframes playerHurt{50%{transform:translateX(-4px)}}
+
+.fighter-portrait__media,.fighter-portrait__emoji{display:block;width:100%;height:100%;object-fit:cover}
+.fighter-portrait__emoji{font-size:1.65rem;line-height:3rem;text-align:center}
+
+.battle-toast{flex-shrink:0;padding:0 .55rem .4rem;text-align:center;min-height:1.4rem}
+.battle-log{
+  font-size:.78rem;font-weight:600;color:#fef3c7;line-height:1.35;
+  margin:0 auto;max-width:32rem;
+  /* The narration line was previously single-line + ellipsis, which made
+     anything over a few characters silently truncate (especially Alonso's
+     answers on phones). Allow up to 2 lines and wrap normally so players
+     can actually read what's happening. */
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;text-overflow:ellipsis;white-space:normal;word-break:break-word;
+  text-shadow:0 1px 4px rgba(0,0,0,.7);
+  transition:opacity .2s ease;
+}
+.battle-log:empty{opacity:0}
+
+.alonso-stack{
+  position:relative;flex-shrink:0;width:3.35rem;height:3.35rem;
+}
+.alonso-stack .alonso-portrait{position:relative;z-index:1;width:100%;height:100%}
+.speech-bubble{
+  max-width:min(14rem,42vw);min-width:5.5rem;
+  padding:.4rem .55rem;border-radius:.55rem;
+  font-size:.72rem;line-height:1.32;font-weight:600;
+  background:linear-gradient(180deg,rgba(30,27,75,.96),rgba(15,23,42,.96));
+  color:#fef3c7;border:1.5px solid rgba(251,146,60,.55);
+  box-shadow:0 6px 18px rgba(0,0,0,.55),0 0 14px rgba(251,146,60,.18);
+  animation:speechIn .25s ease;
+}
+.speech-bubble.hidden{display:none}
+.speech-bubble.is-fading{opacity:0;transition:opacity .35s ease}
+/* Alonso's bubble floats to the bottom-right of his portrait so it doesn't
+   shrink the portrait or distort the row, and so it's visible on phones. */
+.speech-bubble--alonso{
+  position:absolute;top:100%;right:0;margin-top:.45rem;
+  z-index:6;
+}
+.speech-bubble--alonso::after{
+  content:'';position:absolute;right:.85rem;top:-.4rem;
+  width:0;height:0;
+  border-left:.4rem solid transparent;border-right:.4rem solid transparent;
+  border-bottom:.45rem solid rgba(251,146,60,.55);
+}
+.speech-bubble--alonso::before{
+  content:'';position:absolute;right:.9rem;top:-.3rem;
+  width:0;height:0;
+  border-left:.32rem solid transparent;border-right:.32rem solid transparent;
+  border-bottom:.36rem solid rgba(15,23,42,.96);z-index:1;
+}
+.speech-bubble strong{color:#fde047;font-weight:800}
+@keyframes speechIn{from{opacity:0;transform:translateY(-4px) scale(.95)}to{opacity:1;transform:none}}
+@media(max-width:639px){
+  .speech-bubble{max-width:11rem;font-size:.62rem;padding:.3rem .45rem}
+  .battle-log{font-size:.7rem}
+}
+
+.discard-pile-wrap{
+  position:absolute;bottom:1rem;right:1rem;display:flex;flex-direction:column;align-items:center;gap:.15rem;
+  pointer-events:none;z-index:6;
+}
+.discard-pile{
+  position:relative;width:2.35rem;height:3.1rem;border-radius:.38rem;
+  background:linear-gradient(145deg,#334155,#1e293b);
+  border:2px dashed rgba(148,163,184,.35);opacity:.85;
+  transform:perspective(400px) rotateX(22deg);
+  box-shadow:0 8px 16px rgba(0,0,0,.45);
+}
+.discard-pile.has-cards{border-style:solid;border-color:rgba(148,163,184,.5);opacity:1}
+.discard-count{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:.58rem;font-weight:900;color:#64748b;
+}
+.discard-pile.has-cards .discard-count{color:#cbd5e1}
+.discard-label{font-size:.48rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;text-align:center}
+
+.rules-list{text-align:left;margin:.65rem 0 0;padding:0 0 0 1rem;font-size:.74rem;color:#cbd5e1;line-height:1.55}
+.rules-list li{margin-bottom:.35rem}
+.overlay-card--rules{max-width:22rem;max-height:85vh;overflow-y:auto}
+
+@media(max-width:639px){
+  .play-card-q{font-size:.72rem}
+  .opt-btn{font-size:.74rem;padding:.55rem .55rem}
+  .fighter-portrait{width:2.7rem;height:2.7rem}
+  .alonso-portrait{width:2.85rem;height:2.85rem}
+  .alonso-stack{width:2.85rem;height:2.85rem}
+  .discard-pile{width:1.9rem;height:2.5rem}
+  .battle-stage{padding:.25rem .35rem .2rem}
+}
+
+.overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.96);padding:1.25rem}
+.overlay-card{
+  max-width:21rem;padding:1.5rem;border-radius:.65rem;
+  border:3px solid #d4af37;background:linear-gradient(165deg,#1e1b4b,#0f172a);
+  box-shadow:0 24px 60px rgba(0,0,0,.7);
+}
+.overlay-card .feature-list{
+  text-align:left;margin:.75rem 0 0;padding:0;list-style:none;
+  font-size:.72rem;color:#94a3b8;line-height:1.55;
+}
+.overlay-card .feature-list li::before{content:'⚔ ';color:#fde68a}
+.btn-primary{
+  margin-top:.9rem;padding:.85rem 1.4rem;border:none;border-radius:.45rem;
+  font-family:Georgia,'Times New Roman',serif;font-weight:900;font-size:.95rem;
+  background:linear-gradient(180deg,#fde047,#ca8a04);color:#1c1917;cursor:pointer;
+  border:2px solid #78350f;box-shadow:0 4px 0 #78350f;width:100%;
+}
+.target-hint{font-size:.62rem;color:#64748b;margin-top:.35rem}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+<div id="start-overlay" class="overlay">
+  <div class="overlay-card">
+    <p style="font-size:2.75rem;margin:0;line-height:1">⚔️</p>
+    <h1 id="start-title" style="font-family:Georgia,'Times New Roman',serif;font-size:1.4rem;font-weight:900;color:#fde68a;margin:.45rem 0">Duelo vs Alonso</h1>
+    <p id="start-desc" style="color:#94a3b8;font-size:.82rem;margin:0 auto;max-width:17rem;line-height:1.5"></p>
+    <ul id="start-features" class="feature-list"></ul>
+    <p id="start-stats" style="color:#64748b;font-size:.68rem;margin:.65rem 0 0"></p>
+    <p id="loading-text" class="hidden" style="color:#a78bfa;font-size:.78rem;margin-top:.85rem"></p>
+    <button type="button" id="btn-start-rules" style="margin-top:.65rem;background:none;border:none;color:#a78bfa;font-size:.72rem;font-weight:700;cursor:pointer;text-decoration:underline"></button>
+    <button type="button" id="btn-start" class="btn-primary"></button>
+    <p class="target-hint" id="start-hint"></p>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <div id="duel-shake-root">
+    <div class="duel-mat" id="duel-mat" aria-hidden="true"></div>
+    <div id="float-layer" aria-hidden="true"></div>
+    <div id="event-banner-stack" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <div class="hud-top">
+      <span id="round-badge" class="round-badge">Ronda 1</span>
+      <span id="shield-badge" class="shield-badge" title="">🛡 Escudo</span>
+      <span id="review-due-chip" class="review-due-chip hidden"></span>
+      <div id="special-meter-wrap" class="special-meter-wrap">
+        <span class="special-meter-label" id="special-label">Poder</span>
+        <div class="special-meter"><div id="special-fill" class="special-meter-fill"></div></div>
+      </div>
+      <span id="crit-hint" class="crit-hint hidden">¡Próxima carta crítica!</span>
+      <div class="hud-deck-chips" aria-label="Estado del mazo">
+        <span class="hud-chip" title="Mazo común"><em id="shared-deck-count">0</em> 🃏</span>
+        <span class="hud-chip" title="Descarte"><em id="discard-count">0</em> ↺</span>
+      </div>
+      <button type="button" id="btn-rules" class="btn-rules" aria-label="Reglas">?</button>
+    </div>
+
+    <div class="duel-table">
+      <div class="fighter-bar fighter-bar--flip" aria-label="Alonso">
+        <div class="alonso-stack">
+          <div id="alonso-speech" class="speech-bubble speech-bubble--alonso hidden" role="status" aria-live="polite"></div>
+          <div class="fighter-portrait alonso-portrait" id="alonso-portrait" data-mood="idle" aria-hidden="true">
+          <svg viewBox="0 0 100 100">
+            <path d="M6 96 L6 44 Q50 -2 94 44 L94 96 Z" fill="#1e1b4b"/>
+            <path d="M14 96 L14 50 Q50 18 86 50 L86 96 Z" fill="#312e81"/>
+            <ellipse cx="50" cy="56" rx="23" ry="27" fill="#fdba74"/>
+            <ellipse cx="50" cy="80" rx="20" ry="6" fill="#c2410c" opacity=".25"/>
+            <path class="alonso-brows" d="M34 42 L46 46 M66 42 L54 46" stroke="#7f1d1d" stroke-width="3" stroke-linecap="round" fill="none" opacity="0"/>
+            <g class="alonso-eyes-open">
+              <ellipse cx="41" cy="52" rx="5" ry="6" fill="#0c0a09"/>
+              <ellipse cx="59" cy="52" rx="5" ry="6" fill="#0c0a09"/>
+              <circle cx="42" cy="50" r="1.4" fill="#fff"/>
+              <circle cx="60" cy="50" r="1.4" fill="#fff"/>
+            </g>
+            <g class="alonso-eyes-think" opacity="0">
+              <path d="M36 52 Q41 49 46 52" stroke="#0c0a09" stroke-width="3" fill="none" stroke-linecap="round"/>
+              <path d="M54 52 Q59 49 64 52" stroke="#0c0a09" stroke-width="3" fill="none" stroke-linecap="round"/>
+            </g>
+            <g class="alonso-eyes-hurt" opacity="0">
+              <path d="M37 48 L46 56 M46 48 L37 56" stroke="#0c0a09" stroke-width="3" stroke-linecap="round"/>
+              <path d="M55 48 L64 56 M64 48 L55 56" stroke="#0c0a09" stroke-width="3" stroke-linecap="round"/>
+            </g>
+            <path class="alonso-mouth alonso-mouth-idle" d="M38 66 Q50 74 62 66" stroke="#7f1d1d" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path class="alonso-mouth alonso-mouth-smug" d="M38 70 Q50 60 62 70" stroke="#7f1d1d" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0"/>
+            <ellipse class="alonso-mouth alonso-mouth-hurt" cx="50" cy="68" rx="5" ry="6" fill="#3a0a0a" opacity="0"/>
+            <g class="alonso-think-bubble" opacity="0">
+              <circle cx="82" cy="22" r="9" fill="#fef3c7" stroke="#fde047" stroke-width="2"/>
+              <circle cx="76" cy="32" r="3" fill="#fef3c7" stroke="#fde047" stroke-width="1.5"/>
+              <text x="82" y="26" text-anchor="middle" font-size="11" font-weight="900" fill="#7c2d12">?</text>
+            </g>
+          </svg>
+          </div>
+        </div>
+        <div class="fighter-meta">
+          <div class="fighter-name" id="alonso-name">Alonso</div>
+          <div class="hp-wrap">
+            <div class="hp-bar"><div id="hp-fill-alonso" class="hp-fill hp-fill--foe" style="width:0%"></div></div>
+            <div class="hp-nums">
+              <span id="hp-label-alonso">Puntos</span>
+              <span><span id="score-alonso">0</span><span class="hp-cap"> / <span id="win-target">100</span></span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phase-strip">
+        <p id="phase-banner" class="phase-banner">—</p>
+        <p id="table-hint" class="table-hint"></p>
+      </div>
+
+      <div class="battle-stage" id="battle-stage">
+        <div id="battle-slot" class="battle-slot">
+          <div id="block-timer" class="block-timer hidden" aria-hidden="true">
+            <svg viewBox="0 0 36 36"><circle class="block-timer-track" cx="18" cy="18" r="15"/><circle id="block-timer-fill" class="block-timer-fill" cx="18" cy="18" r="15"/></svg>
+            <span id="block-timer-num" class="block-timer-num">12</span>
+          </div>
+        </div>
+        <div id="table-pool" class="table-pool" role="group" aria-label="Cartas en la mesa"></div>
+      </div>
+
+      <div class="fighter-bar" aria-label="Tú">
+        <div class="fighter-portrait player-portrait" id="player-portrait" data-mood="idle" aria-hidden="true">
+          <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#064e3b" opacity=".35"/><ellipse cx="50" cy="54" rx="26" ry="30" fill="#f1f5f9"/><ellipse cx="40" cy="50" rx="4" ry="5" fill="#0f172a"/><ellipse cx="60" cy="50" rx="4" ry="5" fill="#0f172a"/><path d="M42 62 Q50 68 58 62" stroke="#0f172a" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        </div>
+        <div class="fighter-meta">
+          <div class="fighter-name" id="you-name">Tú</div>
+          <div class="hp-wrap">
+            <div class="hp-bar"><div id="hp-fill-you" class="hp-fill hp-fill--you" style="width:0%"></div></div>
+            <div class="hp-nums">
+              <span id="hp-label-you">Puntos</span>
+              <span><span id="score-you">0</span><span class="hp-cap"> / <span id="win-target-you">100</span></span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="battle-toast"><p id="battle-log" class="battle-log"></p></div>
+    </div>
+  </div>
+</div>
+
+<div id="rules-overlay" class="overlay hidden">
+  <div class="overlay-card overlay-card--rules">
+    <h2 id="rules-title" style="font-family:Georgia,serif;font-size:1.15rem;font-weight:900;color:#fde68a;margin:0 0 .35rem"></h2>
+    <ol id="rules-list" class="rules-list"></ol>
+    <button type="button" id="btn-rules-close" class="btn-primary"></button>
+  </div>
+</div>
+
+<div id="end-overlay" class="overlay hidden">
+  <div class="overlay-card">
+    <p id="end-emoji" style="font-size:2.5rem;margin:0;line-height:1">🏆</p>
+    <h2 id="end-title" style="font-family:Georgia,'Times New Roman',serif;font-size:1.35rem;font-weight:900;color:#fde68a;margin:.35rem 0 0"></h2>
+    <p id="end-scores" style="color:#94a3b8;margin:.85rem 0;font-size:.88rem"></p>
+    <p id="end-bonus" style="color:#a78bfa;font-size:.75rem;margin:0"></p>
+    <button type="button" id="btn-replay" class="btn-primary"></button>
+  </div>
+</div>
+<script type="module" src="./game.js"></script>
+</body>
+</html>
