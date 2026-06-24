@@ -1,0 +1,8 @@
+Third-party notices — Arborito Games (this directory)
+
+Tailwind CSS (build-time dependency; compiled CSS is served from this origin — no CDN)
+  SPDX-License-Identifier: MIT
+  Copyright (c) Tailwind Labs, Inc.
+  Full license text: https://github.com/tailwindlabs/tailwindcss/blob/master/LICENSE
+
+When you run `npm install` in this folder, npm records exact versions in package-lock.json. Other packages pulled in by the Tailwind toolchain (for example PostCSS, Autoprefixer) are subject to their respective SPDX licenses; run `npm ls --all` and consult each package’s LICENSE file for audit trails.

@@ -1,0 +1,7 @@
+{
+  "name": "Duelo vs Alonso",
+  "description": "Batalla de cartas con un mazo común y 5 cartas siempre en la mesa. Cada ronda los dos eligen una carta para que el otro la responda. Llega a 100 puntos antes que Alonso. Combos, bloqueos perfectos, escudo y críticos.",
+  "icon": "🃏",
+  "version": "3.0.0",
+  "author": "Arborito Official"
+}

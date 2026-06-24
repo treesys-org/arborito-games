@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "arborito-sdk"
+version = "0.1.0"
+description = "Arborito SDK for independent game creators: same API as window.arborito, .arborito + library loaders, static Quiz V2 and dynamic AI via a local llama.cpp server."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-or-later" }
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["arborito_sdk*"]

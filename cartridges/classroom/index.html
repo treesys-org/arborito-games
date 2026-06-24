@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <link rel="stylesheet" href="/tailwind.css">
+    <title>Arborito Classroom: Ace Logic</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --term-green: #4ade80;
+            --classroom-ui-max: 96%;
+        }
+        .hidden { display: none !important; }
+        html {
+            height: 100%;
+            -webkit-text-size-adjust: 100%;
+        }
+        body {
+            background-color: var(--bg-color);
+            margin: 0;
+            overflow: hidden;
+            font-family: monospace;
+            user-select: none;
+            height: 100%;
+            min-height: 100%;
+        }
+
+        
+        /* Static scanlines only — no animation (photosensitivity). */
+        .crt-overlay {
+            position: fixed; inset: 0; pointer-events: none; z-index: 5;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            opacity: 0.99;
+        }
+
+        
+        #game-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            box-sizing: border-box;
+            isolation: isolate;
+            overflow: hidden;
+        }
+
+        #game-stage {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            overflow: hidden;
+            box-sizing: border-box;
+            container-type: inline-size;
+        }
+
+        #game-viewport {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        #game-viewport canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        
+        .game-ui {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(100%, var(--classroom-vp-width, 100%));
+            max-width: min(100%, var(--classroom-vp-width, 100%));
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-end;
+            gap: 0.35rem;
+            padding: 0 max(0.5rem, env(safe-area-inset-left, 0px)) max(0.5rem, env(safe-area-inset-bottom, 0px)) max(0.5rem, env(safe-area-inset-right, 0px));
+            box-sizing: border-box;
+            z-index: 20;
+            pointer-events: none;
+            overflow: visible;
+        }
+        .game-ui > * {
+            pointer-events: auto;
+            position: relative;
+        }
+        #input-overlay,
+        #text-overlay,
+        #choice-overlay {
+            z-index: 120;
+        }
+        .game-ui::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 48%;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.28) 55%, transparent 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        
+        .dialogue-stack {
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            display: none;
+            flex-direction: column;
+            align-items: flex-start;
+            order: 10;
+            z-index: 500;
+        }
+        .dialogue-box {
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            min-height: 4em;
+            max-height: min(36dvh, 38%);
+            overflow: hidden;
+            flex-shrink: 0;
+            display: none;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.96);
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000, 0 -8px 24px rgba(0, 0, 0, 0.45);
+            padding: 12px 14px;
+            color: #000;
+            font-size: clamp(0.95rem, 3.4cqw, 1.35rem);
+            line-height: 1.4;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+        #dialogue-text {
+            flex: 1 1 auto;
+            min-height: 3.5em;
+            max-height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            text-shadow: 0 1px 1px rgb(255 255 255 / 0.6);
+            padding-right: 0.25rem;
+            box-sizing: border-box;
+            white-space: pre-wrap;
+            word-break: break-word;
+            pointer-events: none;
+            user-select: none;
+        }
+        .dialogue-panel {
+            position: relative;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.4rem;
+            pointer-events: auto;
+        }
+        .speaker-name {
+            position: relative;
+            background: #000;
+            color: #fff;
+            padding: 3px 10px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: clamp(0.65rem, 2.6cqw, 0.92rem);
+            border: 3px solid #000;
+            line-height: 1.2;
+            max-width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 510;
+            box-sizing: border-box;
+            margin-bottom: -3px;
+        }
+
+        .next-btn {
+            position: relative;
+            align-self: flex-end;
+            flex-shrink: 0;
+            background: #4ade80;
+            color: #000;
+            border: 3px solid #000;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: clamp(0.8rem, 3.2cqw, 1.05rem);
+            padding: 0.55rem 0.9rem;
+            min-height: 2.75rem;
+            min-width: 6.5rem;
+            cursor: pointer;
+            box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+            z-index: 60;
+            display: none;
+            text-transform: uppercase;
+            line-height: 1.15;
+            text-align: center;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .next-btn.is-waiting {
+            background: #86efac;
+            color: #14532d;
+            cursor: progress;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.35);
+        }
+        .next-btn.is-waiting:active { transform: none; box-shadow: 2px 2px 0 rgba(0,0,0,0.35); }
+        .next-btn:active { transform: translate(4px, 4px); box-shadow: none; }
+
+        #input-overlay {
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            z-index: 120;
+            order: 5;
+            display: none;
+            flex-direction: row;
+            align-items: stretch;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            box-sizing: border-box;
+        }
+
+        #text-overlay {
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            z-index: 120;
+            order: 6;
+            display: none;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            box-sizing: border-box;
+        }
+
+        #choice-overlay {
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            z-index: 125;
+            order: 8;
+            display: none;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-end;
+            gap: 0.35rem;
+            box-sizing: border-box;
+            pointer-events: auto;
+        }
+        .choice-prompt {
+            flex-shrink: 0;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: clamp(0.72rem, 3cqw, 0.95rem);
+            color: #4ade80;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            text-shadow: 0 1px 4px rgb(0 0 0 / 0.85);
+            padding: 0 0.15rem;
+        }
+        #choice-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            width: 100%;
+            min-height: 0;
+            max-height: min(40dvh, 100%);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
+        .choice-opt-btn {
+            width: 100%;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: clamp(0.78rem, 3.2cqw, 1rem);
+            padding: 0.55rem 0.7rem;
+            min-height: 2.75rem;
+            border: 3px solid #fff;
+            background: rgba(30, 41, 59, 0.94);
+            color: #f8fafc;
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+            cursor: pointer;
+            text-align: left;
+            line-height: 1.3;
+            box-sizing: border-box;
+            transition: transform 0.1s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            white-space: normal;
+            word-break: break-word;
+        }
+        .choice-opt-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: none;
+        }
+
+        /* When showing choices: question dialogue moves ABOVE the options so it
+           stays readable while the player picks an answer. */
+        .game-ui.has-choices .dialogue-stack {
+            order: 8;
+            z-index: 520;
+            flex-shrink: 0;
+        }
+        .game-ui.has-choices .dialogue-box {
+            max-height: min(26dvh, 30%);
+            min-height: 3em;
+            cursor: default;
+        }
+        .game-ui.has-choices .dialogue-panel {
+            gap: 0;
+        }
+        .game-ui.has-choices #choice-overlay {
+            z-index: 530;
+            order: 10;
+            flex: 0 1 auto;
+            min-height: 0;
+            max-height: min(46dvh, 52%);
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.78);
+            border: 2px solid rgba(255, 255, 255, 0.28);
+            box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+        }
+        .game-ui.has-choices #choice-options {
+            max-height: none;
+            flex: 1 1 auto;
+        }
+
+        #player-input {
+            flex: 1 1 120px;
+            min-width: 0;
+            background: rgba(0, 0, 0, 0.88);
+            color: #4ade80;
+            border: 3px solid #fff;
+            font-family: monospace;
+            font-size: clamp(0.75rem, 3cqw, 1.35rem);
+            padding: 0.35rem 0.6rem;
+            text-transform: uppercase;
+            outline: none;
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+        }
+        #btn-submit {
+            background: #4ade80;
+            color: #000;
+            border: 3px solid #fff;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: clamp(0.65rem, 2.4cqw, 1.1rem);
+            padding: 0.45rem 0.75rem;
+            cursor: pointer;
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+        }
+        #btn-submit:active { transform: translate(4px, 4px); box-shadow: none; }
+
+        .judge-btn {
+            font-family: monospace;
+            font-weight: bold;
+            font-size: clamp(0.65rem, 2.5cqw, 1.1rem);
+            padding: 0.45rem 0.75rem;
+            border: 3px solid #fff;
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: transform 0.1s;
+            text-transform: uppercase;
+        }
+        .judge-btn:active { transform: translate(4px, 4px); box-shadow: none; }
+
+        .btn-correct { background: #16a34a; color: white; }
+        .btn-wrong { background: #dc2626; color: white; }
+
+        .shout-bubble {
+            position: absolute;
+            top: 18%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-5deg);
+            background: #fff;
+            color: #b91c1c;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: clamp(1.2rem, 6cqw, 3.5rem);
+            padding: 0.65rem 1rem;
+            border: 4px solid #000;
+            box-shadow: 8px 8px 0 rgba(0,0,0,0.5);
+            z-index: 30;
+            display: none;
+            text-transform: uppercase;
+            max-width: 88%;
+            text-align: center;
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+        .shout-bubble.is-success {
+            color: #16a34a;
+            transform: translate(-50%, -50%) rotate(5deg);
+        }
+
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate(-51%, -51%) rotate(-5deg); } 20%, 80% { transform: translate(-49%, -49%) rotate(-5deg); } 30%, 50%, 70% { transform: translate(-52%, -50%) rotate(-5deg); } 40%, 60% { transform: translate(-48%, -50%) rotate(-5deg); } }
+
+        #start-screen {
+            position: absolute;
+            inset: 0;
+            background: #111;
+            z-index: 60;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: max(0.75rem, env(safe-area-inset-top, 0px)) max(1rem, env(safe-area-inset-right, 0px))
+                max(1.5rem, env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-left, 0px));
+            box-sizing: border-box;
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            text-align: center;
+        }
+        .start-logo {
+            margin: 0 0 1rem;
+            padding: 0;
+            border: none;
+            font-family: monospace;
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.05;
+            color: transparent;
+            background: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.08em;
+        }
+        .logo-classroom {
+            color: #4ade80;
+            font-size: clamp(1.4rem, 5.5cqw, 3.25rem);
+            text-shadow:
+                0 1px 0 #14532d,
+                0 2px 8px rgb(0 0 0 / 0.9);
+        }
+        .logo-simulator {
+            color: #f8fafc;
+            font-size: clamp(0.85rem, 3.5cqw, 2rem);
+            letter-spacing: 0.04em;
+            text-shadow:
+                0 1px 2px rgb(0 0 0 / 0.95),
+                0 2px 10px rgb(0 0 0 / 0.88);
+        }
+        #start-desc {
+            color: #e5e7eb;
+            margin-bottom: 1rem;
+            font-family: monospace;
+            text-align: center;
+            font-size: clamp(0.8rem, 2.8vmin, 1rem);
+            line-height: 1.5;
+            max-width: 22rem;
+            text-shadow:
+                0 1px 2px rgb(0 0 0 / 0.95),
+                0 2px 14px rgb(0 0 0 / 0.8);
+        }
+
+        #btn-start {
+            padding: 0.75rem 1.5rem;
+            background-color: #16a34a;
+            color: white;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: clamp(1rem, 3.5vmin, 1.5rem);
+            border: 4px solid white;
+            box-shadow:
+                4px 4px 0 #000,
+                0 4px 20px rgb(0 0 0 / 0.55);
+            cursor: pointer;
+            transition: all 0.1s;
+            text-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+        }
+        #btn-start:hover { background-color: #22c55e; }
+        #btn-start:active { transform: translate(2px, 2px); box-shadow: 4px 4px 0px #000; }
+
+        #rules-overlay {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 55;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            gap: 0.75rem;
+            padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+                max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+            box-sizing: border-box;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .syllabus-card {
+            background: #fff; color: #000;
+            padding: 2rem; border: 4px solid #4ade80;
+            box-shadow: 10px 10px 0 rgba(74, 222, 128, 0.3);
+            max-width: 600px; width: 100%;
+            font-family: monospace;
+            box-sizing: border-box;
+        }
+        .syllabus-card h2 {
+            font-size: clamp(1.5rem, 3vw, 3rem);
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            text-decoration: underline;
+            text-decoration-thickness: 4px;
+            text-decoration-color: #22c55e;
+        }
+        .syllabus-card ul {
+            font-size: clamp(1rem, 2vw, 1.5rem);
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .syllabus-card li { margin-bottom: 0.5rem; }
+
+        #btn-ready {
+            width: 100%; background: #000; color: #4ade80;
+            font-weight: bold; padding: 1rem; font-size: 1.5rem;
+            border: 2px solid transparent; cursor: pointer;
+            transition: all 0.2s;
+            font-family: monospace;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        #btn-ready:hover {
+            background: #22c55e; color: #fff; border-color: #000;
+        }
+
+        #rotate-warning {
+            display: none;
+            position: fixed;
+            top: max(0.5rem, env(safe-area-inset-top, 0px));
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            background: rgba(0, 0, 0, 0.92);
+            color: #4ade80;
+            border: 1px solid rgba(74, 222, 128, 0.45);
+            border-radius: 999px;
+            font-family: monospace;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 0.45rem 0.85rem;
+            pointer-events: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+            white-space: nowrap;
+            max-width: calc(100% - 1.5rem);
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #rotate-warning { display: none; }
+
+        
+        @media (pointer: coarse), (max-width: 768px) {
+            .game-ui {
+                padding: 0 max(0.5rem, env(safe-area-inset-left, 0px)) max(0.65rem, env(safe-area-inset-bottom, 0px)) max(0.5rem, env(safe-area-inset-right, 0px));
+                gap: 0.4rem;
+            }
+            .dialogue-box {
+                padding: 10px 12px;
+                font-size: clamp(0.95rem, 3.6cqw, 1.2rem);
+                border-width: 2px;
+                max-height: min(32dvh, 38%);
+                min-height: 3.5em;
+            }
+            .speaker-name {
+                font-size: clamp(0.78rem, 2.8cqw, 0.95rem);
+                border-width: 2px;
+            }
+            .choice-opt-btn {
+                font-size: clamp(0.88rem, 3.2cqw, 1.05rem);
+                padding: 0.6rem 0.75rem;
+                min-height: 2.85rem;
+                border-width: 2px;
+            }
+            .choice-prompt {
+                font-size: clamp(0.82rem, 2.8cqw, 1rem);
+            }
+            .game-ui.has-choices #choice-overlay {
+                max-height: min(48dvh, 56%);
+            }
+            .game-ui.has-choices .dialogue-box {
+                max-height: min(20dvh, 26%);
+            }
+            .next-btn {
+                padding: 0.6rem 1rem;
+                font-size: clamp(0.85rem, 2.8cqw, 1rem);
+                border-width: 2px;
+                min-height: 2.85rem;
+                min-width: 7rem;
+            }
+            .judge-btn {
+                font-size: clamp(0.72rem, 3.2cqw, 0.95rem);
+                padding: 0.45rem 0.65rem;
+                min-height: 40px;
+            }
+            #player-input {
+                font-size: clamp(0.8rem, 3.6cqw, 1.05rem);
+            }
+            #btn-submit {
+                font-size: clamp(0.72rem, 3cqw, 0.9rem);
+            }
+            .shout-bubble {
+                top: 16%;
+                font-size: clamp(0.95rem, 5.5cqw, 1.6rem);
+                padding: 0.5rem 0.75rem;
+                border-width: 3px;
+            }
+            #rules-overlay {
+                padding: 0.65rem;
+            }
+            .syllabus-card {
+                padding: 1rem 1.1rem;
+                max-height: min(88dvh, 100%);
+                overflow-y: auto;
+            }
+        }
+
+        @media (pointer: coarse) and (orientation: landscape) and (max-height: 450px),
+            (max-width: 768px) and (orientation: landscape) and (max-height: 450px) {
+            .dialogue-box {
+                max-height: 50%;
+                padding: 10px 12px 26px;
+                font-size: clamp(0.75rem, 3.2cqw, 1rem);
+            }
+            .next-btn {
+                padding: 2px 6px;
+                font-size: clamp(0.48rem, 2cqw, 0.62rem);
+            }
+            .shout-bubble {
+                font-size: clamp(0.72rem, 4.5cqw, 1.1rem);
+            }
+        }
+
+        @media (max-height: 560px) and (orientation: landscape) {
+            #start-screen {
+                padding-top: max(0.25rem, env(safe-area-inset-top, 0px));
+                padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+            }
+            .start-logo { margin-bottom: 0.35rem; gap: 0.02em; }
+            .logo-classroom { font-size: clamp(0.85rem, 3.6vmin, 1.75rem); }
+            .logo-simulator { font-size: clamp(0.52rem, 2.2vmin, 1.1rem); }
+            #start-desc { margin-bottom: 0.4rem; font-size: clamp(0.65rem, 2.2vmin, 0.85rem); line-height: 1.35; }
+            #btn-start { padding: 0.35rem 0.85rem; font-size: clamp(0.72rem, 2.5vmin, 1rem); border-width: 3px; }
+        }
+        @media (max-height: 380px) and (orientation: landscape) {
+            .start-logo { margin-bottom: 0.2rem; }
+            .logo-classroom { font-size: clamp(0.78rem, 3.2vmin, 1.4rem); }
+            .logo-simulator { font-size: clamp(0.48rem, 2vmin, 0.95rem); }
+            #start-desc { margin-bottom: 0.3rem; }
+        }
+
+        
+
+    </style>
+</head>
+<body>
+
+    <div id="rotate-warning">⟳ Gira el móvil para jugar mejor</div>
+
+    <div class="crt-overlay"></div>
+
+    <div id="game-wrapper">
+        <div id="game-stage">
+            <div id="game-viewport">
+                <canvas id="game-canvas"></canvas>
+            </div>
+
+            <div id="game-ui" class="game-ui">
+                <div id="input-overlay">
+                    <button id="btn-judge-true" class="judge-btn btn-correct">✅ CORRECT</button>
+                    <button id="btn-judge-false" class="judge-btn btn-wrong">❌ WRONG</button>
+                </div>
+                <div id="text-overlay">
+                    <input type="text" id="player-input" placeholder="TYPE ANSWER..." maxlength="80" autocomplete="off">
+                    <button id="btn-submit">SUBMIT</button>
+                </div>
+                <div id="choice-overlay">
+                    <div id="choice-prompt" class="choice-prompt">Choose an answer:</div>
+                    <div id="choice-options"></div>
+                </div>
+                <div id="dialogue-stack" class="dialogue-stack">
+                    <div id="speaker-name" class="speaker-name">???</div>
+                    <div class="dialogue-panel">
+                        <div id="dialogue-box" class="dialogue-box">
+                            <div id="dialogue-text"></div>
+                        </div>
+                        <button type="button" id="btn-next" class="next-btn">NEXT ▶</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="shout-bubble" class="shout-bubble">OBJECTION!</div>
+        </div>
+
+        <div id="rules-overlay">
+            <div class="syllabus-card">
+                <h2 id="rules-title">CLASS SYLLABUS</h2>
+                <ul>
+                    <li id="rule-1">...</li>
+                    <li id="rule-2">...</li>
+                    <li id="rule-3">...</li>
+                </ul>
+                <button id="btn-ready">
+                    I AM READY
+                </button>
+            </div>
+        </div>
+
+        <div id="start-screen">
+            <h1 class="start-logo">
+                <span class="logo-classroom">CLASSROOM</span>
+                <span class="logo-simulator">SIMULATOR</span>
+            </h1>
+            <p id="start-desc"></p>
+            <button type="button" id="btn-start"></button>
+        </div>
+    </div>
+
+    <script type="module" src="./engine.js"></script>
+</body>
+</html>
