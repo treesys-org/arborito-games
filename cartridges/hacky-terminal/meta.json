@@ -1,0 +1,7 @@
+{
+  "author": "Arborito Official",
+  "description": "Retro shell for lesson missions. Static mode replays course commands and cuestionarios; dynamic AI mode adds an interactive tutor.",
+  "icon": "💻",
+  "name": "Hacky Terminal",
+  "version": "1.0.0"
+}

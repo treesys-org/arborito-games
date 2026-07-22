@@ -1,0 +1,65 @@
+[
+    {
+        "id": "alonso-duel",
+        "name": "Alonso Duel",
+        "description": "Batalla de cartas con un mazo com\u00fan y 5 cartas siempre en la mesa. Cada ronda los dos eligen una carta para que el otro la responda. Llega a 100 puntos antes que Alonso. Combos, bloqueos perfectos, escudo y cr\u00edticos.",
+        "icon": "\ud83c\udccf",
+        "path": "./cartridges/alonso-duel/index.html",
+        "version": "1.0.0",
+        "author": "Arborito Official"
+    },
+    {
+        "id": "classroom",
+        "name": "Classroom Simulator",
+        "description": "Simulador de aula RPG. Juzga a tus compa\u00f1eros y responde al profesor. Modo est\u00e1tico: cuestionarios Quiz V2 del autor; modo din\u00e1mico: IA local opcional.",
+        "icon": "\ud83d\udc68\u200d\ud83c\udfeb",
+        "path": "./cartridges/classroom/index.html",
+        "version": "1.0.0",
+        "author": "Community"
+    },
+    {
+        "id": "firstjob",
+        "name": "First Job: Corp Sim",
+        "description": "Simulador de trabajo RPG. Recibe llamadas al m\u00f3vil, sube a los pisos indicados y gestiona tu estr\u00e9s comprando comida en la cafeter\u00eda.",
+        "icon": "\ud83d\udcbc",
+        "path": "./cartridges/firstjob/index.html",
+        "version": "1.0.0",
+        "author": "Arborito Official"
+    },
+    {
+        "id": "hacky-terminal",
+        "name": "Hacky Terminal",
+        "description": "Retro shell for lesson missions. Static mode replays course commands and cuestionarios; dynamic AI mode adds an interactive tutor.",
+        "icon": "\ud83d\udcbb",
+        "path": "./cartridges/hacky-terminal/index.html",
+        "version": "1.0.0",
+        "author": "Arborito Official"
+    },
+    {
+        "id": "memory",
+        "name": "Memory Garden: Overgrowth",
+        "description": "Dos modos: PARES empareja t\u00e9rminos en una rejilla r\u00e1pida; REPASO te muestra una tarjeta con signo de pregunta: la tocas, gira, ves la respuesta y respondes Bien o Repasar para que el SRS programe la pr\u00f3xima.",
+        "icon": "\ud83c\udf3a",
+        "path": "./cartridges/memory/index.html",
+        "version": "1.0.0",
+        "author": "Arborito Official"
+    },
+    {
+        "id": "starship",
+        "name": "Starship Learner",
+        "description": "Odisea espacial \u00e9pica: explora galaxias, combate al Coro del Vac\u00edo, recupera fragmentos de conocimiento y vive una historia por cap\u00edtulos.",
+        "icon": "\ud83d\ude80",
+        "path": "./cartridges/starship/index.html",
+        "version": "1.0.0",
+        "author": "Arborito Official"
+    },
+    {
+        "id": "wrong-fruit",
+        "name": "Wrong Fruit",
+        "description": "Guide a hungry garden worm through short garden sessions. Eat fruits with the right answers, dodge hedges, rocks, and hostile garden gnomes.",
+        "icon": "\ud83d\udc1b",
+        "path": "./cartridges/wrong-fruit/index.html",
+        "version": "1.0.1",
+        "author": "Arborito Official"
+    }
+]

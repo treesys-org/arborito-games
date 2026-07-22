@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.vite/
+*.arborito
+
+# Python (arborito-sdk repo — not in this tree)
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+*.local
+.env
+.env.*
+!.env.example
+coverage/
+.DS_Store
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*

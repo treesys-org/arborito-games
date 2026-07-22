@@ -1,0 +1,60 @@
+Third-party notices for Arborito Games (this directory)
+======================================================
+
+Arborito Games (browser Arcade cartridges) is licensed under GPL-3.0 (see `LICENSE`).
+Cartridge source in `cartridges/` is GPL-3.0 like the rest of this repo.
+
+Trademarks and unofficial builds (project policy, not legal advice):
+see https://github.com/treesys-org/arborito/blob/main/docs/forking-and-branding.md
+
+This NOTICE is provided for compliance/attribution and is informational; it is
+not legal advice.
+
+
+1) Runtime cartridges (this repo)
+---------------------------------
+
+Official HTML cartridges ship **asset-free** by design: procedural Canvas graphics,
+Unicode emoji, system fonts, Web Audio synthesis. No binary art or third-party CDN
+fonts are bundled in `cartridges/`.
+
+Each cartridge runs inside the Arborito app, which injects `window.arborito` (GPL-3.0
+browser SDK implemented in the main `arborito` repository). Lesson content comes from
+the user's active tree, not from this repo.
+
+
+2) Build-time dependencies (dev hub only)
+-----------------------------------------
+
+Tailwind CSS (compiled into `public/tailwind.css`: no CDN at runtime)
+ SPDX-License-Identifier: MIT
+ Copyright (c) Tailwind Labs, Inc.
+ Full license text: https://github.com/tailwindlabs/tailwindcss/blob/master/LICENSE
+
+Vite (local dev / preview server for the cartridge hub)
+ SPDX-License-Identifier: MIT
+ Copyright (c) 2019-present VoidZero Inc. and Vite contributors
+ Full license text: https://github.com/vitejs/vite/blob/main/LICENSE
+
+TypeScript (type-checking tooling only; cartridges are plain HTML/JS)
+ SPDX-License-Identifier: Apache-2.0
+ Copyright (c) Microsoft Corporation
+ Full license text: https://github.com/microsoft/TypeScript/blob/main/LICENSE.txt
+
+PostCSS, Autoprefixer, and other npm packages pulled in by the Tailwind/Vite toolchain
+are subject to their respective SPDX licenses. When you run `npm install`, exact
+versions are recorded in `package-lock.json`; run `npm ls --all` and consult each
+package's LICENSE file for audit trails. These are development dependencies and are
+not shipped inside Arborito's in-app Arcade iframe.
+
+
+3) Related repositories
+-----------------------
+
+| Repo | License | Legal / third-party detail |
+|------|---------|----------------------------|
+| arborito | GPL-3.0 | `NOTICE` in main app (Twemoji, Noble, WebTorrent, …) |
+| arborito-sdk | GPL-3.0-or-later | `NOTICE` in Python SDK repo |
+
+EU Digital Services Act (DSA) operator copy and Impressum strings live in the main
+`arborito` app (`locales/*/legal.json`), not in this games repo.

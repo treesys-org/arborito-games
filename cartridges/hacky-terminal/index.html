@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <link rel="stylesheet" href="/tailwind.css">
+    <title>Hacky Terminal</title>
+    <style>
+        :root {
+            --term-green: #4ade80;
+            --term-bg: #0a0f0a;
+            --term-panel: #111827;
+        }
+        html, body {
+            height: 100%;
+            margin: 0;
+            background: var(--term-bg);
+            color: var(--term-green);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            overflow: hidden;
+        }
+        .hidden { display: none !important; }
+        .crt-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 5;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.22) 50%);
+            background-size: 100% 2px;
+            opacity: 0.85;
+        }
+        #app {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+                max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+            box-sizing: border-box;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.65rem;
+            flex-shrink: 0;
+        }
+        .title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        h1 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #86efac;
+        }
+        .mode-badge {
+            font-size: 0.55rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            padding: 0.2rem 0.45rem;
+            border-radius: 0.25rem;
+            border: 1px solid;
+        }
+        .mode-badge--static {
+            color: #fdba74;
+            border-color: rgba(251, 146, 60, 0.55);
+            background: rgba(251, 146, 60, 0.12);
+        }
+        .mode-badge--dynamic {
+            color: #67e8f9;
+            border-color: rgba(34, 211, 238, 0.55);
+            background: rgba(34, 211, 238, 0.12);
+        }
+        #lesson-topic {
+            margin: 0.2rem 0 0;
+            font-size: 0.62rem;
+            color: #6ee7b7;
+            opacity: 0.85;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .score-box {
+            text-align: right;
+            font-size: 0.62rem;
+            color: #94a3b8;
+        }
+        .hud-stats {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.35rem;
+        }
+        .lives-box {
+            text-align: right;
+            font-size: 0.62rem;
+            color: #94a3b8;
+        }
+        #lives-display {
+            font-size: 1rem;
+            letter-spacing: 0.12em;
+            color: #f87171;
+            line-height: 1;
+        }
+        #score-display {
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: #facc15;
+            line-height: 1;
+        }
+        #terminal-wrap {
+            flex: 1 1 0;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(74, 222, 128, 0.35);
+            border-radius: 0.75rem;
+            background: var(--term-panel);
+            box-shadow: 0 0 40px rgba(74, 222, 128, 0.08), inset 0 0 0 1px rgba(255,255,255,0.03);
+            overflow: hidden;
+        }
+        #term-chrome {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.45rem 0.65rem;
+            background: #1f2937;
+            border-bottom: 1px solid rgba(74, 222, 128, 0.2);
+            font-size: 0.62rem;
+            color: #9ca3af;
+        }
+        .dot { width: 0.55rem; height: 0.55rem; border-radius: 999px; }
+        .dot-r { background: #ef4444; }
+        .dot-y { background: #eab308; }
+        .dot-g { background: #22c55e; }
+        #term-output {
+            flex: 1 1 0;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 0.75rem;
+            font-size: 0.78rem;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .term-line { margin: 0 0 0.35rem; }
+        .term-line--cmd { color: #f8fafc; }
+        .term-line--out { color: #86efac; }
+        .term-line--err { color: #fca5a5; }
+        .term-line--hint { color: #fde68a; opacity: 0.9; }
+        .term-line--sys { color: #93c5fd; }
+        #term-input-row {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.55rem 0.75rem;
+            border-top: 1px solid rgba(74, 222, 128, 0.2);
+            background: rgba(0,0,0,0.25);
+        }
+        #term-prompt {
+            color: #34d399;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        #term-input {
+            flex: 1 1 0;
+            min-width: 0;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: #ecfdf5;
+            font: inherit;
+            font-size: 0.82rem;
+        }
+        #mission-bar {
+            margin-top: 0.55rem;
+            padding: 0.55rem 0.7rem;
+            border-radius: 0.55rem;
+            border: 1px dashed rgba(250, 204, 21, 0.45);
+            background: rgba(250, 204, 21, 0.08);
+            font-size: 0.68rem;
+            color: #fde68a;
+            flex-shrink: 0;
+        }
+        .overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(10, 15, 10, 0.92);
+            backdrop-filter: blur(6px);
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+        .start-card {
+            width: min(24rem, 100%);
+            text-align: center;
+            padding: 1.5rem 1.25rem;
+            border: 1px solid rgba(74, 222, 128, 0.35);
+            border-radius: 1rem;
+            background: rgba(17, 24, 39, 0.9);
+        }
+        .start-title {
+            margin: 0 0 0.35rem;
+            font-size: 1.75rem;
+            font-weight: 900;
+            color: #86efac;
+            letter-spacing: 0.06em;
+        }
+        .start-desc {
+            margin: 0 0 1.25rem;
+            font-size: 0.72rem;
+            color: #94a3b8;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        #btn-start {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border: none;
+            border-radius: 0.55rem;
+            background: linear-gradient(180deg, #059669, #047857);
+            color: white;
+            font-weight: 800;
+            font-size: 0.85rem;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        #btn-start:hover { filter: brightness(1.08); }
+        #victory-screen { text-align: center; }
+        #defeat-screen { text-align: center; }
+        #victory-title { font-size: 1.5rem; font-weight: 900; color: #facc15; margin: 0 0 0.5rem; }
+        #defeat-title { font-size: 1.5rem; font-weight: 900; color: #f87171; margin: 0 0 0.5rem; }
+        .victory-actions { display: flex; flex-direction: column; gap: 0.5rem; width: min(16rem, 90vw); margin-top: 1rem; }
+        .victory-actions button {
+            padding: 0.7rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+        }
+        #btn-continue { background: #059669; color: white; border: none; }
+        #btn-retry, #btn-defeat-retry { background: transparent; color: #cbd5e1; border: 1px solid rgba(255,255,255,0.35); }
+        #btn-menu, #btn-defeat-menu { background: transparent; color: #86efac; border: 1px solid rgba(74,222,128,0.45); }
+        #loading-state .spinner {
+            width: 2.5rem; height: 2.5rem;
+            border: 3px solid #10b981;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 0.75rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="crt-overlay" aria-hidden="true"></div>
+
+    <div id="app" class="hidden">
+        <header>
+            <div>
+                <div class="title-row">
+                    <h1>HACKY TERMINAL</h1>
+                    <span id="mode-badge" class="mode-badge mode-badge--static">STATIC</span>
+                </div>
+                <p id="lesson-topic">…</p>
+            </div>
+            <div class="hud-stats">
+                <div class="score-box">
+                    <div id="score-label">Points</div>
+                    <div id="score-display">0</div>
+                </div>
+                <div class="lives-box">
+                    <div id="lives-label">Lives</div>
+                    <div id="lives-display">♥♥♥</div>
+                </div>
+            </div>
+        </header>
+
+        <div id="terminal-wrap">
+            <div id="term-chrome">
+                <span class="dot dot-r"></span>
+                <span class="dot dot-y"></span>
+                <span class="dot dot-g"></span>
+                <span id="term-title">alumno@arborito:~</span>
+            </div>
+            <div id="term-output" aria-live="polite"></div>
+            <form id="term-input-row" autocomplete="off">
+                <span id="term-prompt">$</span>
+                <input id="term-input" type="text" spellcheck="false" autocomplete="off" aria-label="Command" />
+            </form>
+        </div>
+        <div id="mission-bar">…</div>
+    </div>
+
+    <div id="start-screen" class="overlay">
+        <div class="start-card">
+            <h2 class="start-title">HACKY<br>TERMINAL</h2>
+            <p id="start-desc" class="start-desc">Lesson missions in a retro shell.</p>
+            <div id="loading-state" class="hidden">
+                <div class="spinner"></div>
+                <p id="loading-text">Loading…</p>
+            </div>
+            <button id="btn-start" type="button">BOOT</button>
+        </div>
+    </div>
+
+    <div id="victory-screen" class="overlay hidden">
+        <h2 id="victory-title">VICTORY</h2>
+        <p id="victory-stats" class="start-desc">…</p>
+        <div class="victory-actions">
+            <button id="btn-continue" type="button">NEXT LESSON</button>
+            <button id="btn-retry" type="button">RETRY</button>
+            <button id="btn-menu" type="button">BACK TO MENU</button>
+        </div>
+    </div>
+
+    <div id="defeat-screen" class="overlay hidden">
+        <h2 id="defeat-title">OUT OF LIVES</h2>
+        <p id="defeat-stats" class="start-desc">…</p>
+        <div class="victory-actions">
+            <button id="btn-defeat-retry" type="button">TRY AGAIN</button>
+            <button id="btn-defeat-menu" type="button">BACK TO MENU</button>
+        </div>
+    </div>
+
+    <script type="module" src="./engine.js"></script>
+</body>
+</html>
