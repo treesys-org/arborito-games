@@ -24,6 +24,7 @@ npm install
 npm run dev # Vite + rebuilds Tailwind (predev)
 npm run build:css # after editing src/styles/tailwind.entry.css
 python game_builder.py # refresh manifest.json after adding cartridges
+# CI (Games Catalog) regenerates on push/PR and fails if manifest.json is stale.
 ```
 
 Open the dev server URL and pick a cartridge from the hub. For in-app testing, point Arborito Arcade at this repo’s published `manifest.json` (see main app Arcade settings).

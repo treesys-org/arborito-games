@@ -443,7 +443,7 @@ The arcade hub (`index.html`) uses Tailwind utilities. One stylesheet is built l
 
 ## Publishing
 
-Merge to **`main`** on this repo (via pull request). Arborito’s Arcade loads root **`manifest.json`** from jsDelivr, run `python game_builder.py` after adding cartridges, or keep the manifest in sync manually.
+Merge to **`main`** on this repo (via pull request). Arborito’s Arcade loads root **`manifest.json`** from jsDelivr. After adding cartridges, run `python game_builder.py` and commit the updated manifest (CI **Games Catalog** fails if it is stale).
 
 The **Arborito app** pins jsDelivr `@main` to the **latest GitHub commit SHA** when loading games (see `arcade-games-cdn.js`), so fixes on `main` appear within ~90s without waiting for CDN edge expiry. Bump **`meta.json` `version`** when you change cartridge behaviour so testers can confirm what loaded.
 
