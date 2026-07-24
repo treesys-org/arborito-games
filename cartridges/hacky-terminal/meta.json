@@ -1,7 +1,11 @@
 {
   "author": "Arborito Official",
-  "description": "Retro shell for lesson missions. Static mode replays course commands and cuestionarios; dynamic AI mode adds an interactive tutor.",
+  "description": "Retro shell for lesson missions. Static mode replays course commands and quizzes; dynamic AI mode adds an interactive tutor.",
   "icon": "💻",
   "name": "Hacky Terminal",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "descriptions": {
+    "en": "Retro shell for lesson missions. Static mode replays course commands and quizzes; dynamic AI mode adds an interactive tutor.",
+    "es": "Terminal retro para misiones de lección. Modo estático: comandos y cuestionarios del curso; modo dinámico: tutor interactivo con IA."
+  }
 }

@@ -58,16 +58,25 @@ def main():
                     except: pass
 
                 name = item.replace("-", " ").replace("_", " ").title()
-                
-                games.append({
+
+                entry = {
                     "id": item,
                     "name": meta.get("name", f"Arborito Academy: {name}"),
                     "description": meta.get("description", "An interactive educational experience."),
                     "icon": meta.get("icon", "👾"),
-                    "path": f"./cartridges/{item}/index.html", # Relative to manifest.json
+                    "path": f"./cartridges/{item}/index.html",  # Relative to manifest.json
                     "version": meta.get("version", "1.0.0"),
-                    "author": meta.get("author", "Community")
-                })
+                    "author": meta.get("author", "Community"),
+                }
+                # Optional per-language blurbs — Arborito picks by UI lang; new games need no app release.
+                descriptions = meta.get("descriptions")
+                if isinstance(descriptions, dict) and descriptions:
+                    entry["descriptions"] = {
+                        str(k).lower(): str(v)
+                        for k, v in descriptions.items()
+                        if str(v).strip()
+                    }
+                games.append(entry)
             else:
                 # Folder without index.html -> Skip or Warn
                 pass

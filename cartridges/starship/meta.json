@@ -1,7 +1,11 @@
 {
   "name": "Starship Learner",
-  "description": "Odisea espacial épica: explora galaxias, combate al Coro del Vacío, recupera fragmentos de conocimiento y vive una historia por capítulos.",
+  "description": "Epic space odyssey: explore galaxies, fight the Void Chorus, recover knowledge fragments, and follow a chapter story.",
   "icon": "🚀",
   "version": "1.0.0",
-  "author": "Arborito Official"
+  "author": "Arborito Official",
+  "descriptions": {
+    "en": "Epic space odyssey: explore galaxies, fight the Void Chorus, recover knowledge fragments, and follow a chapter story.",
+    "es": "Odisea espacial épica: explora galaxias, combate al Coro del Vacío, recupera fragmentos de conocimiento y vive una historia por capítulos."
+  }
 }

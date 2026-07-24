@@ -1,7 +1,11 @@
 {
   "author": "Arborito Official",
-  "description": "Dos modos: PARES empareja términos en una rejilla rápida; REPASO te muestra una tarjeta con signo de pregunta: la tocas, gira, ves la respuesta y respondes Bien o Repasar para que el SRS programe la próxima.",
+  "description": "Two modes: Pairs matches terms on a fast grid; Review shows a question-mark card — tap to flip, see the answer, then mark Good or Review so SRS schedules the next one.",
   "icon": "🌺",
   "name": "Memory Garden: Overgrowth",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "descriptions": {
+    "en": "Two modes: Pairs matches terms on a fast grid; Review shows a question-mark card — tap to flip, see the answer, then mark Good or Review so SRS schedules the next one.",
+    "es": "Dos modos: Pares empareja términos en una rejilla rápida; Repaso muestra una tarjeta con signo de pregunta: la tocas, gira, ves la respuesta y marcas Bien o Repasar para que el SRS programe la próxima."
+  }
 }

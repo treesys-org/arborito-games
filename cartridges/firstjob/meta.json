@@ -1,7 +1,11 @@
 {
   "name": "First Job: Corp Sim",
-  "description": "Simulador de trabajo RPG. Recibe llamadas al móvil, sube a los pisos indicados y gestiona tu estrés comprando comida en la cafetería.",
+  "description": "RPG job simulator. Take phone calls, go to the right floors, and manage stress by buying food in the cafeteria.",
   "icon": "💼",
   "version": "1.0.0",
-  "author": "Arborito Official"
+  "author": "Arborito Official",
+  "descriptions": {
+    "en": "RPG job simulator. Take phone calls, go to the right floors, and manage stress by buying food in the cafeteria.",
+    "es": "Simulador de trabajo RPG. Recibe llamadas al móvil, sube a los pisos indicados y gestiona tu estrés comprando comida en la cafetería."
+  }
 }

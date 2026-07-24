@@ -1,6 +1,10 @@
 {
   "name": "Classroom Simulator",
-  "description": "Simulador de aula RPG. Juzga a tus compañeros y responde al profesor. Modo estático: cuestionarios Quiz V2 del autor; modo dinámico: IA local opcional.",
+  "description": "RPG classroom simulator. Judge classmates and answer the teacher. Static mode uses the author’s Quiz V2 questionnaires; dynamic mode adds optional local AI.",
   "icon": "👨‍🏫",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "descriptions": {
+    "en": "RPG classroom simulator. Judge classmates and answer the teacher. Static mode uses the author’s Quiz V2 questionnaires; dynamic mode adds optional local AI.",
+    "es": "Simulador de aula RPG. Juzga a tus compañeros y responde al profesor. Modo estático: cuestionarios Quiz V2 del autor; modo dinámico: IA local opcional."
+  }
 }

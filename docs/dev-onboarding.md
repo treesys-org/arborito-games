@@ -31,7 +31,7 @@ Open the dev server URL and pick a cartridge from the hub. For in-app testing, p
 ## Adding a cartridge
 
 1. Create `cartridges/<id>/` with `index.html` and `meta.json` (**set `version`** in meta).
-2. Run `python game_builder.py` (or add an entry to root **`manifest.json`**: `id`, `name`, `path`, …).
+2. Run `python game_builder.py` (or add an entry to root **`manifest.json`**: `id`, `name`, `description`, optional `descriptions` `{en,es}`, `path`, …).
 3. Keep games **asset-free** (no binary art, no CDN fonts): see root [`README.md`](../README.md).
 
 ## Lesson text in cartridges

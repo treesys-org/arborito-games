@@ -40,7 +40,7 @@ Both speak the same vocabulary: `lesson.next()`, `challenge.fromLesson(...)`, `m
 
 1. **Fork** [treesys-org/arborito-games](https://github.com/treesys-org/arborito-games).
 2. **Create** `cartridges/your-game/index.html` + `meta.json`.
-3. **Regenerate** the catalog with `python game_builder.py` (or add an entry to root **`manifest.json`**: `id`, `name`, `path`, …).
+3. **Regenerate** the catalog with `python game_builder.py` (or add an entry to root **`manifest.json`**: `id`, `name`, `description`, optional `descriptions` `{en,es}`, `path`, …).
 4. **Open a PR.** After merge, your game appears in the in-app Arcade for every Arborito user.
 
 Players pick a **module + game** in Arborito; your cartridge receives `window.arborito` with the lesson playlist. Same API names as the Python SDK (`lesson`, `challenge`, `memory`, …). Python game ideas live in [arborito-sdk](https://github.com/treesys-org/arborito-sdk).
@@ -91,6 +91,10 @@ cartridges/
 {
  "name": "Super Quiz",
  "description": "One question per lesson, straight from the lesson's quiz block.",
+ "descriptions": {
+   "en": "One question per lesson, straight from the lesson's quiz block.",
+   "es": "Una pregunta por lección, sacada del bloque de cuestionario."
+ },
  "icon": "🧠",
  "version": "1.0.0",
  "author": "Me"

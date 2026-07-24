@@ -1,7 +1,11 @@
 {
   "name": "Alonso Duel",
-  "description": "Batalla de cartas con un mazo común y 5 cartas siempre en la mesa. Cada ronda los dos eligen una carta para que el otro la responda. Llega a 100 puntos antes que Alonso. Combos, bloqueos perfectos, escudo y críticos.",
+  "description": "Card battle with a shared deck and five cards always on the table. Each round both pick a card for the other to answer. Reach 100 points before Alonso. Combos, perfect blocks, shield, and crits.",
   "icon": "🃏",
   "version": "1.0.0",
-  "author": "Arborito Official"
+  "author": "Arborito Official",
+  "descriptions": {
+    "en": "Card battle with a shared deck and five cards always on the table. Each round both pick a card for the other to answer. Reach 100 points before Alonso. Combos, perfect blocks, shield, and crits.",
+    "es": "Batalla de cartas con un mazo común y 5 cartas siempre en la mesa. Cada ronda los dos eligen una carta para que el otro la responda. Llega a 100 puntos antes que Alonso. Combos, bloqueos perfectos, escudo y críticos."
+  }
 }

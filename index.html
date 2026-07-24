@@ -24,6 +24,15 @@
  </footer>
 
  <script>
+ function descFor(game) {
+ const lang = String(navigator.language || 'en').toLowerCase().slice(0, 2);
+ const map = game && game.descriptions;
+ if (map && typeof map === 'object') {
+ return map[lang] || map.en || map.es || game.description || '';
+ }
+ return (game && game.description) || '';
+ }
+
  async function loadGames() {
  const container = document.getElementById('game-list');
  try {
@@ -41,7 +50,7 @@
  card.innerHTML = `
  <span class="mb-4 block text-6xl">${game.icon}</span>
  <div class="mb-2 text-xl font-bold">${game.name}</div>
- <div class="text-sm leading-relaxed text-neutral-400">${game.description}</div>
+ <div class="text-sm leading-relaxed text-neutral-400">${descFor(game)}</div>
  `;
 
  container.appendChild(card);
