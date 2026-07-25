@@ -273,9 +273,7 @@ export const Sprites = {
         ctx.beginPath(); ctx.moveTo(32, 0); ctx.lineTo(32, 55); ctx.stroke();
 
         ctx.fillStyle = '#0ea5e9';
-        ctx.shadowColor = '#0ea5e9'; ctx.shadowBlur = 10;
         ctx.beginPath(); ctx.arc(32, 25, 8, 0, Math.PI*2); ctx.fill();
-        ctx.shadowBlur = 0;
 
         ctx.fillStyle = '#fff';
         ctx.beginPath(); ctx.arc(30, 23, 2, 0, Math.PI*2); ctx.fill();
@@ -313,16 +311,11 @@ export const Sprites = {
         ctx.fillStyle = '#64748b';
         ctx.beginPath(); ctx.roundRect(-13, -6, 4, 16, 2); ctx.fill();
 
-        const hGrad = ctx.createRadialGradient(-3, -13, 2, 0, -10, 12);
-        hGrad.addColorStop(0, '#ffffff');
-        hGrad.addColorStop(1, '#e2e8f0');
-        ctx.fillStyle = hGrad;
+        ctx.fillStyle = '#e2e8f0';
         ctx.beginPath(); ctx.arc(0, -10, 11, 0, Math.PI*2); ctx.fill();
 
         ctx.fillStyle = '#f59e0b';
-        ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 5;
         ctx.beginPath(); ctx.roundRect(2, -13, 9, 6, 2); ctx.fill();
-        ctx.shadowBlur = 0;
 
         ctx.fillStyle = '#cbd5e1';
         if (state === 'run') {
@@ -348,20 +341,13 @@ export const Sprites = {
         ctx.save();
         ctx.translate(x, y + bob);
 
-        ctx.shadowColor = color; ctx.shadowBlur = 15;
-
-        const grad = ctx.createLinearGradient(0,0,0,height);
-        grad.addColorStop(0, color);
-        grad.addColorStop(1, '#000');
-        ctx.fillStyle = grad;
-
+        ctx.fillStyle = color;
         ctx.beginPath();
         ctx.moveTo(16, 0);
         ctx.quadraticCurveTo(32, height/2, 28, height);
         ctx.quadraticCurveTo(16, height-5, 4, height);
         ctx.quadraticCurveTo(0, height/2, 16, 0);
         ctx.fill();
-        ctx.shadowBlur = 0;
 
         ctx.fillStyle = '#dcfce7';
         ctx.beginPath(); ctx.ellipse(16, 0, 12, 16, 0, 0, Math.PI*2); ctx.fill();
@@ -373,9 +359,8 @@ export const Sprites = {
         ctx.strokeStyle = '#a16207';
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(28, 10); ctx.lineTo(28, height); ctx.stroke();
-        ctx.fillStyle = '#fff'; ctx.shadowColor = '#fff'; ctx.shadowBlur = 10;
+        ctx.fillStyle = '#fff';
         ctx.beginPath(); ctx.arc(28, 8, 3, 0, Math.PI*2); ctx.fill();
-        ctx.shadowBlur = 0;
 
         ctx.restore();
     },
@@ -498,15 +483,13 @@ export const Sprites = {
     drawCrystal: (ctx, x, y, frame, collected) => {
         if (collected) return;
         const bob = Math.sin(frame * 0.08) * 4;
-        const glow = 0.6 + Math.sin(frame * 0.12) * 0.4;
         ctx.save();
         ctx.translate(x, y + bob);
-        ctx.shadowColor = '#22d3ee'; ctx.shadowBlur = 15 * glow;
         ctx.fillStyle = '#06b6d4';
         ctx.beginPath();
         ctx.moveTo(0, -14); ctx.lineTo(10, 0); ctx.lineTo(0, 14); ctx.lineTo(-10, 0);
         ctx.closePath(); ctx.fill();
-        ctx.fillStyle = '#a5f3fc'; ctx.globalAlpha = 0.5;
+        ctx.fillStyle = 'rgba(165,243,252,0.5)';
         ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(5, 0); ctx.lineTo(0, 8); ctx.lineTo(-5, 0);
         ctx.closePath(); ctx.fill();
         ctx.restore();
@@ -517,12 +500,7 @@ export const Sprites = {
         const size = 48 * pulse;
         ctx.save();
         ctx.translate(x + size/2, y + size/2);
-        ctx.shadowColor = '#7c3aed'; ctx.shadowBlur = 25;
-        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
-        grad.addColorStop(0, '#a78bfa');
-        grad.addColorStop(0.5, '#6d28d9');
-        grad.addColorStop(1, '#1e1b4b');
-        ctx.fillStyle = grad;
+        ctx.fillStyle = '#6d28d9';
         ctx.beginPath();
         for (let i = 0; i < 8; i++) {
             const a = (i / 8) * Math.PI * 2;
@@ -531,7 +509,8 @@ export const Sprites = {
             i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
         }
         ctx.closePath(); ctx.fill();
-        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#a78bfa';
+        ctx.beginPath(); ctx.arc(0, 0, size * 0.35, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = '#fef08a';
         ctx.beginPath(); ctx.arc(-12, -5, 8, 0, Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.arc(12, -5, 8, 0, Math.PI*2); ctx.fill();

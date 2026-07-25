@@ -2,7 +2,7 @@ import { SpaceEngine } from './space.js';
 import { PlatformerEngine } from './platformer.js';
 import { StoryEngine } from './story.js';
 import { InputManager, bindMobileTap } from './utils.js';
-import { uiCopy, isLowQualityDevice } from './i18n.js';
+import { uiCopy, isLowQualityDevice, usesKeyboardHints } from './i18n.js';
 
 /* Platform helpers come from the SDK (window.arborito.platform.*).
  * Aliased so the rest of the file keeps its existing names. */
@@ -151,13 +151,14 @@ class Game {
  const hint = toast?.querySelector('.control-toast-hint');
  if (!toast || !body) return;
 
+ const keys = usesKeyboardHints();
  if (title) title.textContent = mode === 'space' ? uiCopy('toastTitleSpace') : uiCopy('toastTitlePlanet');
- if (hint) hint.textContent = uiCopy('toastHint');
+ if (hint) hint.textContent = uiCopy(keys ? 'toastHintKeys' : 'toastHint');
 
  if (mode === 'space') {
- body.innerHTML = `<div style="color:#cbd5e1">${uiCopy('toastSpace')}</div>`;
+ body.innerHTML = `<div style="color:#cbd5e1">${uiCopy(keys ? 'toastSpaceKeys' : 'toastSpace')}</div>`;
  } else if (mode === 'planet') {
- body.innerHTML = `<div style="color:#cbd5e1">${uiCopy('toastPlanet')}</div>`;
+ body.innerHTML = `<div style="color:#cbd5e1">${uiCopy(keys ? 'toastPlanetKeys' : 'toastPlanet')}</div>`;
  } else {
  return;
  }
@@ -272,7 +273,7 @@ class Game {
  });
  this.ctx.globalAlpha = 1;
 
- if (!this.lowQuality) {
+ if (!this.lowQuality && this.mode === 'space') {
  this.ctx.drawImage(this.ensureVignette(), 0, 0);
  }
 

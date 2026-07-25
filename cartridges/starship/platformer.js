@@ -1,5 +1,5 @@
 import { SeededRandom, rectIntersect, Sprites, bindMobileTap } from './utils.js';
-import { cartridgeLang, uiCopy } from './i18n.js';
+import { cartridgeLang, uiCopy, usesKeyboardHints } from './i18n.js';
 
 const BOSS_NAMES = ['Eco del Vacío', 'Sombra Primordial', 'Cantor del Olvido'];
 
@@ -52,6 +52,7 @@ const PLANET_COPY = {
  objLaunch: 'Vuelve a la nave y despega.',
  promptTalk: 'Hablar',
  promptLaunch: 'Despegar',
+ promptShip: 'Nave',
  fxAmmo: '+{n} munición',
  fxCrystal: 'Cristal recuperado ({n}/{req})',
  fxMartian: 'Sabio contactado ({n}/{total})',
@@ -83,6 +84,7 @@ const PLANET_COPY = {
  objLaunch: 'Return to the ship and launch.',
  promptTalk: 'Talk',
  promptLaunch: 'Launch',
+ promptShip: 'Ship',
  fxAmmo: '+{n} ammo',
  fxCrystal: 'Crystal recovered ({n}/{req})',
  fxMartian: 'Sage contacted ({n}/{total})',
@@ -102,6 +104,12 @@ function planetCopy(key, vars = {}, lang = planetLangCode()) {
  s = s.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
  }
  return s;
+}
+
+/** Label for context prompt / ship pill; prepend [E] on keyboard layouts. */
+function interactPrompt(key) {
+ const label = planetCopy(key);
+ return usesKeyboardHints() ? `[E] ${label}` : label;
 }
 
 function buildElderGreeting(title, lessonText, lang = planetLangCode()) {
@@ -244,6 +252,9 @@ export class PlatformerEngine {
  this.activeQuiz = null;
 
  this.theme = { ground: '#334155', sky: '#0f172a', bgMount: '#1e293b' };
+ this._promptText = '';
+ this._promptShip = false;
+ this._skyCache = null;
  }
 
  bindTouchControls() {
@@ -356,6 +367,7 @@ export class PlatformerEngine {
  dusk: { ground: '#6b3a2e', sky: '#1a0c10', mount: '#2a1418', hazard: '#9f1239', log: '#44403c' },
  },
  };
+ this._skyCache = null;
 
  const fallbackData = {
  title: planet.data.title,
@@ -462,8 +474,6 @@ Output JSON: { "elder_greeting": "..." }`;
  const numCols = Math.floor(this.levelWidth / this.tileSize);
  const safeCols = 20;
  const bossArenaStart = numCols - 16;
- /** Max platform lift reachable with jump (~2.9 tiles). */
- const MAX_REACHABLE_LIFT = 2;
 
  for (let x = 0; x < numCols; x++) {
  let height = groundY;
@@ -480,7 +490,7 @@ Output JSON: { "elder_greeting": "..." }`;
  height = Math.max(7, Math.min(17, height));
  this.surfaceHeights[x] = height;
 
- for (let y = height; y < 20; y++) {
+ for (let y = height; y < Math.min(20, height + 3); y++) {
  const type = y === height ? 'surface' : 'deep';
  let deco = 0;
  if (type === 'surface') {
@@ -502,18 +512,21 @@ Output JSON: { "elder_greeting": "..." }`;
  }
  }
 
+ const platformTopByCol = new Map();
  const addPlatformRun = (startCol, span, lift) => {
  for (let i = 0; i < span; i++) {
  const col = startCol + i;
  if (col <= safeCols || col >= bossArenaStart) continue;
  const h = this.surfaceHeights[col];
+ const platY = (h - lift) * this.tileSize;
  this.tiles.push({
  x: col * this.tileSize,
- y: (h - lift) * this.tileSize,
+ y: platY,
  w: this.tileSize,
  h: this.tileSize,
  type: 'plat',
  });
+ platformTopByCol.set(col, platY);
  }
  };
 
@@ -522,6 +535,8 @@ Output JSON: { "elder_greeting": "..." }`;
  addPlatformRun(Math.floor(numCols * 0.54), 5, 2);
  addPlatformRun(Math.floor(numCols * 0.68), 4, 2);
 
+ const hazardCols = new Set();
+
  // Biome hazards: grove creek, ruins canal, toxic lake, hop floating logs.
  const carveHazard = (startFrac, widthCols, kind) => {
  const start = Math.floor(numCols * startFrac);
@@ -529,6 +544,7 @@ Output JSON: { "elder_greeting": "..." }`;
  if (start <= safeCols + 2) return;
  const biome = kind === 'grove' ? 'dawn' : kind === 'canal' ? 'mid' : 'dusk';
  for (let col = start; col < end; col++) {
+ hazardCols.add(col);
  const surfaceY = this.surfaceHeights[col] * this.tileSize;
  this.hazards.push({
  x: col * this.tileSize,
@@ -560,14 +576,41 @@ Output JSON: { "elder_greeting": "..." }`;
  carveHazard(0.48, 8, 'canal');
  carveHazard(0.72, 9, 'toxic');
 
- const placeScholar = (col, scholarIndex) => {
- if (col <= safeCols || col >= bossArenaStart - 2) return null;
+ /** Prefer clear ground: no floating platform overhead, no hazard pool. */
+ const isClearGroundCol = (col) => (
+ col > safeCols + 2
+ && col < bossArenaStart - 2
+ && !platformTopByCol.has(col)
+ && !hazardCols.has(col)
+ );
+
+ const findClearCol = (preferred, radius = 14) => {
+ const pref = Math.max(0, Math.min(numCols - 1, preferred | 0));
+ if (isClearGroundCol(pref)) return pref;
+ for (let d = 1; d <= radius; d++) {
+ if (isClearGroundCol(pref + d)) return pref + d;
+ if (isClearGroundCol(pref - d)) return pref - d;
+ }
+ return null;
+ };
+
+ /** Platform top Y for a column, or null if none. */
+ const platformTopY = (col) => (
+ platformTopByCol.has(col) ? platformTopByCol.get(col) : null
+ );
+
+ const occupiedCols = new Set();
+
+ const placeScholar = (preferredCol, scholarIndex) => {
+ const col = findClearCol(preferredCol);
+ if (col == null) return null;
+ occupiedCols.add(col);
  const surfaceY = this.surfaceHeights[col] * this.tileSize;
  const px = col * this.tileSize - 20;
  this.props.push({ x: px, y: surfaceY - 80, type: 'hut', w: 100, h: 80 });
  this.props.push({ x: px + 90, y: surfaceY - 55, type: 'pillar', w: 16, h: 48 });
  const npc = {
- x: col * this.tileSize + 20,
+ x: col * this.tileSize + 8,
  y: surfaceY - 48,
  w: 32,
  h: 48,
@@ -590,8 +633,10 @@ Output JSON: { "elder_greeting": "..." }`;
  Math.floor(numCols * 0.64),
  Math.floor(numCols * 0.76),
  ];
- enemyCols.forEach((col) => {
- if (col <= safeCols + 4 || col >= bossArenaStart - 2) return;
+ enemyCols.forEach((preferred) => {
+ const col = findClearCol(preferred, 10);
+ if (col == null || occupiedCols.has(col)) return;
+ occupiedCols.add(col);
  const surfaceY = this.surfaceHeights[col] * this.tileSize;
  this.enemies.push({
  x: col * this.tileSize,
@@ -629,28 +674,51 @@ Output JSON: { "elder_greeting": "..." }`;
 
  this.props.unshift({ x: elderX - 30, y: elderSurfaceY - 80, type: 'hut', w: 100, h: 80 });
 
- // Crystals only on ground or low platforms the jump can reach.
+ // Crystals on clear ground beside sages, or sitting cleanly on a platform top.
  const crystalSpots = [];
- const pushReachable = (x, surfaceY, liftTiles = 0) => {
- const lift = Math.min(MAX_REACHABLE_LIFT, Math.max(0, liftTiles));
- crystalSpots.push({
- x,
- y: surfaceY - lift * this.tileSize - 36,
- });
+ const pushGroundCrystal = (nearCol) => {
+ const col = findClearCol(nearCol, 12);
+ if (col == null || occupiedCols.has(col)) return false;
+ occupiedCols.add(col);
+ const surfaceY = this.surfaceHeights[col] * this.tileSize;
+ crystalSpots.push({ x: col * this.tileSize + 12, y: surfaceY - 28 });
+ return true;
  };
- if (scholarA) pushReachable(scholarA.col * this.tileSize + 60, scholarA.surfaceY, 0);
- if (scholarB) pushReachable(scholarB.col * this.tileSize + 40, scholarB.surfaceY, 1);
- if (scholarC) pushReachable(scholarC.col * this.tileSize + 30, scholarC.surfaceY, 0);
- else {
- const platCol = Math.floor(numCols * 0.54) + 2;
- pushReachable(platCol * this.tileSize, this.surfaceHeights[platCol] * this.tileSize, 2);
+ const pushPlatformCrystal = (nearCol) => {
+ let best = null;
+ for (let d = 0; d <= 10; d++) {
+ for (const col of d === 0 ? [nearCol] : [nearCol + d, nearCol - d]) {
+ if (col <= safeCols || col >= bossArenaStart) continue;
+ if (occupiedCols.has(col)) continue;
+ const top = platformTopY(col);
+ if (top == null) continue;
+ best = col;
+ break;
+ }
+ if (best != null) break;
+ }
+ if (best == null) return false;
+ occupiedCols.add(best);
+ crystalSpots.push({
+ x: best * this.tileSize + 12,
+ y: platformTopY(best) - 28,
+ });
+ return true;
+ };
+
+ if (scholarA) pushGroundCrystal(scholarA.col + 2);
+ if (scholarB) {
+ if (!pushPlatformCrystal(Math.floor(numCols * 0.54) + 2)) pushGroundCrystal(scholarB.col + 2);
+ }
+ if (scholarC) pushGroundCrystal(scholarC.col + 2);
+ while (crystalSpots.length < this.crystalsRequired) {
+ const guess = Math.floor(rng.range(safeCols + 8, bossArenaStart - 8));
+ if (!pushGroundCrystal(guess) && !pushPlatformCrystal(guess)) break;
  }
 
  for (let c = 0; c < this.crystalsRequired; c++) {
- const spot = crystalSpots[c] || {
- x: rng.range(900, this.levelWidth - 700),
- y: this.surfaceYAt(rng.range(900, this.levelWidth - 700)) - 40,
- };
+ const spot = crystalSpots[c];
+ if (!spot) break;
  this.crystals.push({ x: spot.x, y: spot.y, w: 24, h: 28, collected: false });
  }
 
@@ -663,16 +731,20 @@ Output JSON: { "elder_greeting": "..." }`;
  }
  }
 
+ this.bossArenaMinX = bossArenaStart * this.tileSize + 24;
+ this.bossArenaMaxX = this.levelWidth - 96;
+ this.bossHomeY = endSurfaceY - 96;
+
  this.boss = {
  x: endX,
- y: endSurfaceY - 96,
+ y: this.bossHomeY,
  w: 64,
  h: 64,
  hp: 150,
  maxHp: 150,
  vx: 0,
  vy: 0,
- grounded: false,
+ grounded: true,
  name: BOSS_NAMES[rng.range(0, BOSS_NAMES.length) | 0],
  phase: 0,
  fireTimer: 0,
@@ -1129,22 +1201,26 @@ Output JSON: { "elder_greeting": "..." }`;
  }
 
  if (this.ui.btnInteract) {
- this.ui.btnInteract.style.display = nearby ? 'flex' : 'none';
- if (isShip) {
- this.ui.btnInteract.textContent = this.bossDefeated && this.allMartiansTalked()
- ? uiCopy('btnGo')
- : uiCopy('btnInfo');
- } else {
- this.ui.btnInteract.textContent = uiCopy('btnTalk');
+ const show = !!nearby;
+ const nextLabel = isShip
+ ? (this.bossDefeated && this.allMartiansTalked() ? uiCopy('btnGo') : uiCopy('btnInfo'))
+ : uiCopy('btnTalk');
+ if (this._btnInteractShow !== show) {
+ this._btnInteractShow = show;
+ this.ui.btnInteract.style.display = show ? 'flex' : 'none';
+ }
+ if (show && this._btnInteractLabel !== nextLabel) {
+ this._btnInteractLabel = nextLabel;
+ this.ui.btnInteract.textContent = nextLabel;
  }
  }
 
  if (nearby && !isShip && nearby.type !== 'beacon_npc') {
- this.setContextPrompt(planetCopy('promptTalk'));
+ this.setContextPrompt(interactPrompt('promptTalk'));
  } else if (isShip && this.bossDefeated && this.allMartiansTalked()) {
- this.setContextPrompt(planetCopy('promptLaunch'), true);
+ this.setContextPrompt(interactPrompt('promptLaunch'), true);
  } else if (isShip) {
- this.setContextPrompt(planetCopy('promptTalk'));
+ this.setContextPrompt(interactPrompt('promptShip'), true);
  } else {
  this.setContextPrompt('');
  }
@@ -1166,7 +1242,7 @@ Output JSON: { "elder_greeting": "..." }`;
  this.bossDefeated = true;
  this.boss = null;
  this.game.shake(15);
- for (let i = 0; i < 30; i++) {
+ for (let i = 0; i < 16; i++) {
  this.game.spawnParticle(this.player.x + Math.random() * 100, this.player.y - 50, '#a78bfa', 8, 12);
  }
  this.game.showFx?.(planetCopy('fxBoss'), 'quest', 2200);
@@ -1182,6 +1258,8 @@ Output JSON: { "elder_greeting": "..." }`;
  this.activeDialogue = null;
  if (this.ui.dialogueBox) this.ui.dialogueBox.style.display = 'none';
  if (this.ui.btnInteract) this.ui.btnInteract.style.display = 'none';
+ this._btnInteractShow = false;
+ this._btnInteractLabel = '';
  this.tiles = [];
  this.tilesByCol = [];
  this.npcs = [];
@@ -1200,6 +1278,10 @@ Output JSON: { "elder_greeting": "..." }`;
  this.levelComplete = false;
  this.bossDefeated = false;
  this.isLoading = false;
+ this._skyCache = null;
+ this.bossArenaMinX = 0;
+ this.bossArenaMaxX = 0;
+ this.bossHomeY = 0;
  }
 
  completeLevel() {
@@ -1245,15 +1327,22 @@ Output JSON: { "elder_greeting": "..." }`;
 
  updateBoss() {
  const b = this.boss;
+ const arenaLeft = this.bossArenaMinX ?? (this.levelWidth - 16 * this.tileSize);
+ const arenaRight = this.bossArenaMaxX ?? (this.levelWidth - b.w - 40);
+ const homeY = this.bossHomeY ?? (this.surfaceYAt((arenaLeft + arenaRight) / 2) - b.h);
  const dist = this.player.x - b.x;
  const distY = this.player.y - b.y;
+ const nearEdge = b.x < arenaLeft + 100 || b.x > arenaRight - 100;
 
  if (Math.abs(dist) < 600) {
- const dir = Math.sign(dist);
+ let dir = Math.sign(dist);
+ /* Stay inside the arena — don't chase the player off the cliff. */
+ if (b.x <= arenaLeft + 40 && dir < 0) dir = 1;
+ if (b.x >= arenaRight - 40 && dir > 0) dir = -1;
  b.vx += dir * 0.12;
  b.vx = Math.max(-3.5, Math.min(3.5, b.vx));
 
- if (b.grounded && (Math.random() < 0.015 || (distY < -60 && Math.random() < 0.04))) {
+ if (b.grounded && !nearEdge && (Math.random() < 0.015 || (distY < -60 && Math.random() < 0.04))) {
  b.vy = -14;
  b.grounded = false;
  }
@@ -1274,11 +1363,23 @@ Output JSON: { "elder_greeting": "..." }`;
  }
 
  b.vy += this.gravity;
+ if (b.vy > 18) b.vy = 18;
  b.x += b.vx;
+ if (b.x < arenaLeft) { b.x = arenaLeft; b.vx = Math.abs(b.vx) * 0.4; }
+ if (b.x > arenaRight) { b.x = arenaRight; b.vx = -Math.abs(b.vx) * 0.4; }
  this.resolveEntityTilesX(b);
  b.y += b.vy;
  b.grounded = false;
  this.resolveEntityTilesY(b);
+
+ /* Soft rescue if the boss slipped past collision into the void. */
+ if (!b.grounded && (b.y > homeY + 160 || b.y > 900)) {
+ b.x = Math.min(arenaRight, Math.max(arenaLeft, (arenaLeft + arenaRight) * 0.5));
+ b.y = homeY;
+ b.vx = 0;
+ b.vy = 0;
+ b.grounded = true;
+ }
 
  if (rectIntersect(b, this.player)) {
  this.damage(10);
@@ -1356,10 +1457,17 @@ Output JSON: { "elder_greeting": "..." }`;
  const el = this.ui.contextPrompt;
  if (!el) return;
  if (!text) {
+ if (this._promptText) {
+ this._promptText = '';
+ this._promptShip = false;
  el.classList.remove('visible', 'is-ship');
  el.textContent = '';
+ }
  return;
  }
+ if (this._promptText === text && this._promptShip === !!ship) return;
+ this._promptText = text;
+ this._promptShip = !!ship;
  el.textContent = text;
  el.classList.toggle('is-ship', !!ship);
  el.classList.add('visible');
@@ -1424,30 +1532,42 @@ Output JSON: { "elder_greeting": "..." }`;
  }
 
  drawParallax(ctx) {
- const grad = ctx.createLinearGradient(0, 0, 0, this.game.height);
+ const w = this.game.width;
+ const h = this.game.height;
+ const skyKey = `${this.theme.sky}|${this.theme.bgMount}|${w}x${h}`;
+ if (!this._skyCache || this._skyCache.key !== skyKey) {
+ const c = document.createElement('canvas');
+ c.width = w;
+ c.height = h;
+ const g = c.getContext('2d');
+ const grad = g.createLinearGradient(0, 0, 0, h);
  grad.addColorStop(0, withAlpha(this.theme.sky, 'FF'));
  grad.addColorStop(1, withAlpha(this.theme.bgMount, 'FF'));
- ctx.fillStyle = grad;
- ctx.fillRect(0,0,this.game.width, this.game.height);
-
- ctx.fillStyle = '#fff';
- for(let i=0; i<30; i++) {
- const px = (i * 91283) % this.game.width;
- const py = (i * 38127) % (this.game.height/2);
- ctx.globalAlpha = 0.5;
- ctx.beginPath(); ctx.arc(px, py, 1, 0, Math.PI*2); ctx.fill();
+ g.fillStyle = grad;
+ g.fillRect(0, 0, w, h);
+ g.fillStyle = '#fff';
+ const starCount = this.game.lowQuality ? 12 : 22;
+ for (let i = 0; i < starCount; i++) {
+ const px = (i * 91283) % w;
+ const py = (i * 38127) % (h / 2);
+ g.globalAlpha = 0.5;
+ g.fillRect(px, py, 1, 1);
  }
- ctx.globalAlpha = 1;
+ g.globalAlpha = 1;
+ this._skyCache = { key: skyKey, canvas: c };
+ }
+ ctx.drawImage(this._skyCache.canvas, 0, 0);
 
  const mountOffset = (this.levelWidth ? this.camera.x / this.levelWidth : 0) * 200 + this.camera.x * 0.08;
  ctx.fillStyle = '#0f172a';
  ctx.beginPath();
- ctx.moveTo(0, this.game.height);
- for(let x=0; x<this.game.width + 50; x+=50) {
- const h = Math.abs(Math.sin((x + mountOffset) * 0.01)) * 100 + 100;
- ctx.lineTo(x, this.game.height - h);
+ ctx.moveTo(0, h);
+ const step = this.game.lowQuality ? 80 : 50;
+ for (let x = 0; x < w + step; x += step) {
+ const mh = Math.abs(Math.sin((x + mountOffset) * 0.01)) * 100 + 100;
+ ctx.lineTo(x, h - mh);
  }
- ctx.lineTo(this.game.width, this.game.height);
+ ctx.lineTo(w, h);
  ctx.fill();
  }
 
@@ -1469,7 +1589,14 @@ Output JSON: { "elder_greeting": "..." }`;
  ctx.scale(this.zoom, this.zoom);
  ctx.translate(-Math.floor(this.camera.x), -Math.floor(this.camera.y));
 
+ const viewLeft = this.camera.x;
+ const viewRight = this.camera.x + (this.game.width / this.zoom);
+ const viewTop = this.camera.y;
+ const viewBottom = this.camera.y + (this.game.height / this.zoom);
+ const pad = 64;
+
  this.props.forEach(p => {
+ if (p.x + p.w < viewLeft - pad || p.x > viewRight + pad) return;
  if (p.type === 'hut') Sprites.drawHut(ctx, p.x, p.y, p.w, p.h, this.theme.ground);
  if (p.type === 'pillar') {
  ctx.fillStyle = '#64748b';
@@ -1479,13 +1606,14 @@ Output JSON: { "elder_greeting": "..." }`;
  }
  if (p.type === 'beacon') {
  ctx.fillStyle = '#94a3b8'; ctx.fillRect(p.x+10, p.y, 20, p.h);
- ctx.fillStyle = '#22c55e'; ctx.shadowColor = '#22c55e'; ctx.shadowBlur = 10;
- ctx.beginPath(); ctx.arc(p.x+20, p.y, 10, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+ ctx.fillStyle = '#22c55e';
+ ctx.beginPath(); ctx.arc(p.x+20, p.y, 10, 0, Math.PI*2); ctx.fill();
  }
  });
 
  // Contaminated pools by biome tint.
  this.hazards.forEach((h) => {
+ if (h.x + h.w < viewLeft || h.x > viewRight) return;
  const tint = this.theme.biomes?.[h.biome]?.hazard
  || (h.type === 'toxic' ? '#9f1239' : h.type === 'canal' ? '#1e3a5f' : '#166534');
  ctx.fillStyle = withAlpha(tint, 'AA');
@@ -1494,6 +1622,7 @@ Output JSON: { "elder_greeting": "..." }`;
  ctx.fillRect(h.x, h.y - 4, h.w, 6);
  });
  this.logs.forEach((log) => {
+ if (log.x + log.w < viewLeft || log.x > viewRight) return;
  const wood = this.theme.biomes?.[log.biome]?.log || '#854d0e';
  ctx.fillStyle = wood;
  ctx.fillRect(log.x, log.y, log.w, log.h);
@@ -1501,19 +1630,16 @@ Output JSON: { "elder_greeting": "..." }`;
  ctx.fillRect(log.x + 2, log.y + 2, log.w - 4, 3);
  });
 
- const viewLeft = this.camera.x;
- const viewRight = this.camera.x + (this.game.width / this.zoom);
  const colStart = Math.max(0, Math.floor(viewLeft / this.tileSize) - 1);
  const colEnd = Math.min(this.tilesByCol.length - 1, Math.floor(viewRight / this.tileSize) + 1);
  for (let c = colStart; c <= colEnd; c++) {
  const bucket = this.tilesByCol[c];
  if (!bucket) continue;
  for (const t of bucket) {
+ if (t.y + t.h < viewTop - 8 || t.y > viewBottom + 8) continue;
  if (t.type === 'plat') {
  ctx.fillStyle = withAlpha(this.theme.ground, 'DD');
  ctx.fillRect(t.x, t.y, t.w, t.h);
- ctx.strokeStyle = 'rgba(255,255,255,0.15)';
- ctx.strokeRect(t.x, t.y, t.w, t.h);
  continue;
  }
  const deepShade = t.biome === 'dusk' ? '#0a1018' : t.biome === 'mid' ? '#0f172a' : '#111827';
@@ -1525,23 +1651,15 @@ Output JSON: { "elder_greeting": "..." }`;
  ctx.fillRect(t.x, t.y, t.w, 4);
  if (t.deco === 1) {
  ctx.fillStyle = this.theme.ground;
- ctx.beginPath();
- ctx.moveTo(t.x + 10, t.y);
- ctx.lineTo(t.x + 12, t.y - 6);
- ctx.lineTo(t.x + 14, t.y);
- ctx.fill();
+ ctx.fillRect(t.x + 10, t.y - 6, 4, 6);
  } else if (t.deco === 2) {
  ctx.fillStyle = '#475569';
  ctx.fillRect(t.x + 8, t.y - 8, 12, 8);
  } else if (t.deco === 3) {
- ctx.fillStyle = '#22d3ee';
- ctx.globalAlpha = 0.45;
+ ctx.fillStyle = 'rgba(34,211,238,0.45)';
  ctx.fillRect(t.x + 14, t.y - 4, 4, 4);
- ctx.globalAlpha = 1;
  }
  }
- ctx.strokeStyle = 'rgba(0,0,0,0.2)';
- ctx.strokeRect(t.x, t.y, t.w, t.h);
  }
  }
 
@@ -1553,18 +1671,19 @@ Output JSON: { "elder_greeting": "..." }`;
  const bob = Math.sin(Date.now()*0.005) * 3;
  ctx.translate(0, bob);
 
+ const canLaunch = this.bossDefeated && this.allMartiansTalked();
+ const label = interactPrompt(canLaunch ? 'promptLaunch' : 'promptShip');
  ctx.font = 'bold 8px system-ui, sans-serif';
- ctx.fillStyle = '#facc15'; ctx.textAlign = 'center';
- ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
+ ctx.textAlign = 'center';
+ const pillW = Math.max(80, ctx.measureText(label).width + 16);
 
  ctx.fillStyle = 'rgba(0,0,0,0.8)';
- ctx.fillRect(-40, -10, 80, 12);
+ ctx.fillRect(-pillW / 2, -10, pillW, 12);
  ctx.strokeStyle = '#facc15';
- ctx.strokeRect(-40, -10, 80, 12);
+ ctx.strokeRect(-pillW / 2, -10, pillW, 12);
 
  ctx.fillStyle = '#facc15';
- const canLaunch = this.bossDefeated && this.allMartiansTalked();
- ctx.fillText(canLaunch ? 'DESPEGAR' : 'NAVE', 0, -1);
+ ctx.fillText(label, 0, -1);
 
  ctx.restore();
  }
@@ -1572,6 +1691,7 @@ Output JSON: { "elder_greeting": "..." }`;
 
  this.npcs.forEach(n => {
  if (n.type === 'beacon_npc') return;
+ if (n.x + 40 < viewLeft || n.x > viewRight) return;
  Sprites.drawAlien(ctx, n.x, n.y, n.type === 'elder' ? '#facc15' : '#22c55e', n.h, this.player.animFrame);
  if (Math.abs(this.player.x - n.x) < 80) {
  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(n.x+16, n.y-10); ctx.lineTo(n.x+24, n.y-20); ctx.lineTo(n.x+8, n.y-20); ctx.fill();
@@ -1579,7 +1699,9 @@ Output JSON: { "elder_greeting": "..." }`;
  });
 
  this.crystals.forEach(c => {
- if (!c.collected) Sprites.drawCrystal(ctx, c.x + 12, c.y + 14, this.player.animFrame, false);
+ if (c.collected) return;
+ if (c.x + c.w < viewLeft || c.x > viewRight) return;
+ Sprites.drawCrystal(ctx, c.x + 12, c.y + 14, this.player.animFrame, false);
  });
 
  if (this.boss && !this.bossDefeated) {
@@ -1587,6 +1709,7 @@ Output JSON: { "elder_greeting": "..." }`;
  }
 
  this.enemies.forEach(e => {
+ if (e.x + e.w < viewLeft - 20 || e.x > viewRight + 20) return;
  const bounce = Math.abs(Math.sin(this.player.animFrame * 0.4)) * 5;
  Sprites.drawBlob(ctx, e.x, e.y - bounce, '#ef4444');
  });
@@ -1594,9 +1717,7 @@ Output JSON: { "elder_greeting": "..." }`;
  ctx.fillStyle = '#facc15';
  this.projectiles.forEach(p => {
  ctx.fillRect(p.x, p.y, p.w, p.h);
- ctx.shadowColor = '#facc15'; ctx.shadowBlur = 10;
  });
- ctx.shadowBlur = 0;
 
  Sprites.drawAstronaut(ctx, this.player.x, this.player.y, this.player.facing, this.player.state, this.player.animFrame);
  if (this.player.invuln > 0 && (this.player.invuln % 6) < 3) {
@@ -1606,6 +1727,7 @@ Output JSON: { "elder_greeting": "..." }`;
 
  ctx.restore();
 
+ if (!this.game.lowQuality) {
  const grad = ctx.createLinearGradient(0, 0, 0, this.game.height);
  grad.addColorStop(0, withAlpha(this.theme.ground, '33'));
  grad.addColorStop(1, 'transparent');
@@ -1613,5 +1735,6 @@ Output JSON: { "elder_greeting": "..." }`;
  ctx.globalCompositeOperation = 'overlay';
  ctx.fillRect(0,0,this.game.width, this.game.height);
  ctx.globalCompositeOperation = 'source-over';
+ }
  }
 }
