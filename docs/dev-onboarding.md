@@ -60,7 +60,7 @@ Document behaviour changes in [`CHANGELOG.md`](../CHANGELOG.md) and bump `meta.j
 | Cartridge | Version | Notes |
 |-----------|---------|--------|
 | classroom | 1.2.2 | Fixed 3-slot blackboard |
-| starship | 3.0.1 | Planet exit performance; `plainText` dialogue |
+| starship | 1.0.1 | Mobile dialogue layout; talk/jump input split |
 | alonso-duel | 3.0.0 | |
 | memory | 2.4.0 | |
 | firstjob | 5.0.0 | |

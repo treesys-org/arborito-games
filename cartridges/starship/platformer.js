@@ -277,11 +277,14 @@ export class PlatformerEngine {
  bind('btn-right', 'ArrowRight');
  bind('btn-jump', 'ArrowUp');
  bind('btn-shoot', 'r');
- bind('btn-interact', 'ArrowUp');
+ /* Dedicated interact key — never ArrowUp/W (those are jump). */
+ bind('btn-interact', 'e');
 
- bindMobileTap(this.ui.dialogueBox, () => {
+ bindMobileTap(this.ui.dialogueBox, (e) => {
  if (this.activeQuiz) return;
  if (!this.activeDialogue) return;
+ /* Quiz option taps bubble to the box; ignore those so the answer sticks. */
+ if (e?.target?.closest?.('#dialogue-quiz')) return;
  this.activeDialogue = null;
  this.ui.dialogueBox.style.display = 'none';
  document.body.classList.remove('dialogue-open');
@@ -799,7 +802,10 @@ Output JSON: { "elder_greeting": "..." }`;
  const btn = document.createElement('button');
  btn.type = 'button';
  btn.textContent = opt;
- bindMobileTap(btn, () => this.resolveMartianQuiz(opt));
+ bindMobileTap(btn, (e) => {
+ e?.stopPropagation?.();
+ this.resolveMartianQuiz(opt);
+ });
  box.appendChild(btn);
  });
  }
@@ -893,11 +899,13 @@ Output JSON: { "elder_greeting": "..." }`;
  update() {
  if (this.isLoading) return;
 
+ if (this.game.story?.isShowing) return;
+
  if (this.player.health <= 0) return;
 
  if (this.activeDialogue || this.activeQuiz) {
  if (this.activeQuiz) return;
- if (this.game.input.consume('ArrowUp') || this.game.input.consume(' ') || this.game.input.consume('Enter')
+ if (this.game.input.consume(' ') || this.game.input.consume('Enter')
  || this.game.input.consume('e') || this.game.input.consume('E')
  || this.game.input.consume('z') || this.game.input.consume('Z')) {
  this.activeDialogue = null;
@@ -943,7 +951,9 @@ Output JSON: { "elder_greeting": "..." }`;
  }
 
  if (this.shipObj && Math.abs(this.player.x - this.shipObj.x) < 80 && Math.abs(this.player.y - this.shipObj.y) < 80) {
- if (this.game.input.consume('z') || this.game.input.consume('Z') || this.game.input.consume('Enter')) {
+ if (this.game.input.consume('e') || this.game.input.consume('E')
+ || this.game.input.consume('Enter')
+ || this.game.input.consume('z') || this.game.input.consume('Z')) {
  if (!this.bossDefeated) {
  this.showDialogue('E.D.E.N.', planetCopy('shipNeedBoss', {}, planetLangCode()));
  } else if (!this.allMartiansTalked()) {
@@ -1118,22 +1128,29 @@ Output JSON: { "elder_greeting": "..." }`;
  isShip = true;
  }
 
- this.ui.btnInteract.style.display = (nearby && !isShip) ? 'flex' : 'none';
+ if (this.ui.btnInteract) {
+ this.ui.btnInteract.style.display = nearby ? 'flex' : 'none';
+ if (isShip) {
+ this.ui.btnInteract.textContent = this.bossDefeated && this.allMartiansTalked() ? 'GO' : 'INFO';
+ } else {
+ this.ui.btnInteract.textContent = 'TALK';
+ }
+ }
 
  if (nearby && !isShip && nearby.type !== 'beacon_npc') {
  this.setContextPrompt(planetCopy('promptTalk'));
  } else if (isShip && this.bossDefeated && this.allMartiansTalked()) {
  this.setContextPrompt(planetCopy('promptLaunch'), true);
+ } else if (isShip) {
+ this.setContextPrompt(planetCopy('promptTalk'));
  } else {
  this.setContextPrompt('');
  }
 
- const wantsInteract = this.game.input.consume('ArrowUp')
- || this.game.input.consume('Enter')
- || this.game.input.consume('e')
+ /* Interact must not share jump keys (ArrowUp / W). */
+ const wantsInteract = this.game.input.consume('e')
  || this.game.input.consume('E')
- || this.game.input.consume('w')
- || this.game.input.consume('W');
+ || this.game.input.consume('Enter');
  if (nearby && wantsInteract) {
  if (!isShip) {
  this.interactWithNpc(nearby);
