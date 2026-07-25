@@ -920,22 +920,15 @@ class MemoryGame {
 
  const pairCount = pairsForLevel(this.progress.level);
  const excludeFaces = Array.from(this.usedFaces || []);
- /* Use this lesson only. Curriculum fill made every round look the same
- * when advancing (boards were mostly "the rest of the course"). */
+ /* Fill the grid to pairCount. excludeFaces avoids repeating filler cards
+ * when advancing; if the unused pool is too thin, refill so the board
+ * stays full rather than one lonely pair. */
  let pairs = await window.arborito.matchPairs(lesson, {
- count: pairCount,
- fillFromCurriculum: false,
- excludeFaces
- });
- /* Borrow from other lessons only when this one has zero playable pairs. */
- if (!pairs || !pairs.length) {
- pairs = await window.arborito.matchPairs(lesson, {
  count: pairCount,
  fillFromCurriculum: true,
  excludeFaces
  });
- }
- if ((!pairs || !pairs.length) && excludeFaces.length) {
+ if ((pairs?.length || 0) < pairCount && excludeFaces.length) {
  this.usedFaces = new Set();
  pairs = await window.arborito.matchPairs(lesson, {
  count: pairCount,
