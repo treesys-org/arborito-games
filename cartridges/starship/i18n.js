@@ -18,11 +18,13 @@ const UI_COPY = {
         toastPlanet:
             'Muévete y salta. Acércate a los marcianos, verás <strong style="color:#22c55e">HABLAR</strong>. E.D.E.N. te irá contando el resto.',
         toastPlanetKeys:
-            'Muévete con <kbd>A</kbd><kbd>D</kbd> o flechas, salta con <kbd>Espacio</kbd>. Cerca de un marciano o la nave, pulsa <kbd>E</kbd>.',
+            'Muévete con <kbd>A</kbd><kbd>D</kbd> o flechas, salta con <kbd>Espacio</kbd>, dispara con <kbd>R</kbd>. Cerca de un marciano o la nave, pulsa <kbd>E</kbd>.',
         toastTitleSpace: 'EN ÓRBITA',
         toastTitlePlanet: 'EN SUPERFICIE',
         toastHint: 'Toca para continuar',
         toastHintKeys: 'Pulsa una tecla para continuar',
+        dialogueContinue: 'TOCA PARA CONTINUAR ▶',
+        dialogueContinueKeys: 'PULSA ESPACIO O E ▶',
         landPrompt: '[ESPACIO] ATERRIZAR',
     },
     EN: {
@@ -38,11 +40,13 @@ const UI_COPY = {
         toastPlanet:
             'Move and jump. Near Martians you will see <strong style="color:#22c55e">TALK</strong>. E.D.E.N. guides the rest.',
         toastPlanetKeys:
-            'Move with <kbd>A</kbd><kbd>D</kbd> or arrows, jump with <kbd>Space</kbd>. Near a Martian or the ship, press <kbd>E</kbd>.',
+            'Move with <kbd>A</kbd><kbd>D</kbd> or arrows, jump with <kbd>Space</kbd>, shoot with <kbd>R</kbd>. Near a Martian or the ship, press <kbd>E</kbd>.',
         toastTitleSpace: 'IN ORBIT',
         toastTitlePlanet: 'ON SURFACE',
         toastHint: 'Tap to continue',
         toastHintKeys: 'Press any key to continue',
+        dialogueContinue: 'TAP TO CONTINUE ▶',
+        dialogueContinueKeys: 'PRESS SPACE OR E ▶',
         landPrompt: '[SPACE] LAND',
     },
 };

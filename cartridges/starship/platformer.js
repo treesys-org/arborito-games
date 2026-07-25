@@ -489,7 +489,34 @@ Output JSON: { "elder_greeting": "..." }`;
 
  height = Math.max(7, Math.min(17, height));
  this.surfaceHeights[x] = height;
+ }
 
+ /* Cap adjacent steps so ledges stay jumpable both ways (~1 tile). */
+ for (let pass = 0; pass < 3; pass++) {
+ for (let x = 1; x < numCols; x++) {
+ const prev = this.surfaceHeights[x - 1];
+ if (this.surfaceHeights[x] > prev + 1) this.surfaceHeights[x] = prev + 1;
+ if (this.surfaceHeights[x] < prev - 1) this.surfaceHeights[x] = prev - 1;
+ }
+ for (let x = numCols - 2; x >= 0; x--) {
+ const next = this.surfaceHeights[x + 1];
+ if (this.surfaceHeights[x] > next + 1) this.surfaceHeights[x] = next + 1;
+ if (this.surfaceHeights[x] < next - 1) this.surfaceHeights[x] = next - 1;
+ }
+ }
+ for (let x = 0; x < safeCols; x++) this.surfaceHeights[x] = groundY;
+ for (let x = bossArenaStart; x < numCols; x++) {
+ this.surfaceHeights[x] = groundY + (x >= numCols - 10 ? 0 : 1);
+ }
+ /* Soft ramp into the boss arena so the last approach is not a one-way wall. */
+ for (let x = bossArenaStart - 1; x >= Math.max(safeCols, bossArenaStart - 10); x--) {
+ const next = this.surfaceHeights[x + 1];
+ if (this.surfaceHeights[x] > next + 1) this.surfaceHeights[x] = next + 1;
+ if (this.surfaceHeights[x] < next - 1) this.surfaceHeights[x] = next - 1;
+ }
+
+ for (let x = 0; x < numCols; x++) {
+ const height = this.surfaceHeights[x];
  for (let y = height; y < Math.min(20, height + 3); y++) {
  const type = y === height ? 'surface' : 'deep';
  let deco = 0;
@@ -533,7 +560,8 @@ Output JSON: { "elder_greeting": "..." }`;
  addPlatformRun(Math.floor(numCols * 0.26), 4, 2);
  addPlatformRun(Math.floor(numCols * 0.38), 3, 2);
  addPlatformRun(Math.floor(numCols * 0.54), 5, 2);
- addPlatformRun(Math.floor(numCols * 0.68), 4, 2);
+ /* Last platform before the arena: lift 1 so you can hop back west. */
+ addPlatformRun(Math.floor(numCols * 0.68), 4, 1);
 
  const hazardCols = new Set();
 
@@ -1527,7 +1555,10 @@ Output JSON: { "elder_greeting": "..." }`;
  this.ui.dialogueSpeaker.innerText = speaker;
  this.ui.dialogueText.innerText = text;
  const hint = this.ui.dialogueBox.querySelector('.dialogue-hint');
- if (hint) hint.style.display = '';
+ if (hint) {
+ hint.style.display = '';
+ hint.textContent = uiCopy(usesKeyboardHints() ? 'dialogueContinueKeys' : 'dialogueContinue');
+ }
  document.body.classList.add('dialogue-open');
  }
 

@@ -1,4 +1,5 @@
 import { bindMobileTap } from './utils.js';
+import { uiCopy, usesKeyboardHints } from './i18n.js';
 
 export const STORY = {
  companion: 'E.D.E.N.',
