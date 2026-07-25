@@ -998,7 +998,7 @@ Output JSON: { "elder_greeting": "..." }`;
  }
  }
 
- update() {
+ update(dt = 1) {
  if (this.isLoading) return;
 
  if (this.game.story?.isShowing) return;
@@ -1026,6 +1026,9 @@ Output JSON: { "elder_greeting": "..." }`;
  this.ui.btnInteract.style.display = 'none';
  return;
  }
+
+ const step = Math.max(0.25, Math.min(dt, 2.5));
+ const camLerp = 1 - Math.pow(0.9, step);
 
  this.player.vx = 0;
 
@@ -1066,21 +1069,21 @@ Output JSON: { "elder_greeting": "..." }`;
  }
  }
 
- if (this.player.invuln > 0) this.player.invuln--;
+ if (this.player.invuln > 0) this.player.invuln = Math.max(0, this.player.invuln - step);
 
- this.player.vy += this.gravity;
+ this.player.vy += this.gravity * step;
 
- if(this.player.vy > 18) this.player.vy = 18;
+ if (this.player.vy > 18) this.player.vy = 18;
 
- this.player.x += this.player.vx;
+ this.player.x += this.player.vx * step;
  this.checkCol(true);
 
- this.player.y += this.player.vy;
+ this.player.y += this.player.vy * step;
  this.player.grounded = false;
  this.checkCol(false);
 
  if (!this.player.grounded) this.player.state = 'jump';
- this.player.animFrame++;
+ this.player.animFrame += step;
 
  if (this.game.input.consume('r') || this.game.input.consume('R') ||
  this.game.input.consume('z') || this.game.input.consume('Z') ||
@@ -1089,9 +1092,9 @@ Output JSON: { "elder_greeting": "..." }`;
 
  for (let i = this.projectiles.length - 1; i >= 0; i--) {
  const p = this.projectiles[i];
- p.x += p.vx;
- if (p.vy) p.y += p.vy;
- p.life--;
+ p.x += p.vx * step;
+ if (p.vy) p.y += p.vy * step;
+ p.life -= step;
  if (p.life <= 0) { this.projectiles.splice(i, 1); continue; }
 
  if (this.boss && !this.bossDefeated && !p.enemy && rectIntersect({x: p.x, y: p.y, w: p.w, h: p.h}, this.boss)) {
@@ -1134,7 +1137,7 @@ Output JSON: { "elder_greeting": "..." }`;
  }),
  'crystal',
  1800
-);
+ );
  if (this.crystalsCollected >= this.crystalsRequired) {
  this.showDialogue('E.D.E.N.', planetCopy('crystalsFound', { n: this.crystalsRequired }, planetLangCode()));
  }
@@ -1143,14 +1146,14 @@ Output JSON: { "elder_greeting": "..." }`;
  });
 
  if (this.boss && !this.bossDefeated) {
- this.updateBoss();
+ this.updateBoss(step);
  }
 
  const camLeft = this.camera.x - 120;
  const camRight = this.camera.x + (this.game.width / this.zoom) + 120;
  this.enemies.forEach(e => {
  if (e.x + e.w < camLeft || e.x > camRight) {
- e.vx *= 0.95;
+ e.vx *= Math.pow(0.95, step);
  return;
  }
  const dist = this.player.x - e.x;
@@ -1160,22 +1163,22 @@ Output JSON: { "elder_greeting": "..." }`;
  if (Math.abs(dist) < range) {
  e.aggro = true;
  const dir = Math.sign(dist);
- e.vx += dir * 0.2;
+ e.vx += dir * 0.2 * step;
  e.vx = Math.max(-4, Math.min(4, e.vx));
 
- if (e.grounded && (Math.random() < 0.02 || (distY < -50 && Math.random() < 0.05))) {
+ if (e.grounded && (Math.random() < 0.02 * step || (distY < -50 && Math.random() < 0.05 * step))) {
  e.vy = -12;
  e.grounded = false;
  }
  } else {
- e.vx *= 0.9;
+ e.vx *= Math.pow(0.9, step);
  }
 
- e.vy += this.gravity;
- e.x += e.vx;
+ e.vy += this.gravity * step;
+ e.x += e.vx * step;
  this.resolveEntityTilesX(e);
 
- e.y += e.vy;
+ e.y += e.vy * step;
  e.grounded = false;
  this.resolveEntityTilesY(e);
 
@@ -1189,7 +1192,7 @@ Output JSON: { "elder_greeting": "..." }`;
 
  // Floating logs drift; treat as solid when landing on top.
  this.logs.forEach((log) => {
- log.x += log.vx;
+ log.x += log.vx * step;
  if (log.x < log.minX || log.x > log.maxX) log.vx *= -1;
  if (rectIntersect(this.player, log) && this.player.vy >= 0) {
  const feet = this.player.y + this.player.h;
@@ -1197,7 +1200,7 @@ Output JSON: { "elder_greeting": "..." }`;
  this.player.y = log.y - this.player.h;
  this.player.vy = 0;
  this.player.grounded = true;
- this.player.x += log.vx;
+ this.player.x += log.vx * step;
  }
  }
  });
@@ -1215,8 +1218,8 @@ Output JSON: { "elder_greeting": "..." }`;
  const targetCamY = this.player.y - (this.game.height / this.zoom / 2);
  const clampedTargetY = Math.min(targetCamY, 420);
 
- this.camera.x += (targetCamX - this.camera.x) * 0.1;
- this.camera.y += (clampedTargetY - this.camera.y) * 0.1;
+ this.camera.x += (targetCamX - this.camera.x) * camLerp;
+ this.camera.y += (clampedTargetY - this.camera.y) * camLerp;
 
  let nearby = null;
  let isShip = false;
@@ -1355,8 +1358,9 @@ Output JSON: { "elder_greeting": "..." }`;
  });
  }
 
- updateBoss() {
+ updateBoss(dt = 1) {
  const b = this.boss;
+ const step = Math.max(0.25, Math.min(dt, 2.5));
  const arenaLeft = this.bossArenaMinX ?? (this.levelWidth - 16 * this.tileSize);
  const arenaRight = this.bossArenaMaxX ?? (this.levelWidth - b.w - 40);
  const homeY = this.bossHomeY ?? (this.surfaceYAt((arenaLeft + arenaRight) / 2) - b.h);
@@ -1369,15 +1373,15 @@ Output JSON: { "elder_greeting": "..." }`;
  /* Stay inside the arena — don't chase the player off the cliff. */
  if (b.x <= arenaLeft + 40 && dir < 0) dir = 1;
  if (b.x >= arenaRight - 40 && dir > 0) dir = -1;
- b.vx += dir * 0.12;
+ b.vx += dir * 0.12 * step;
  b.vx = Math.max(-3.5, Math.min(3.5, b.vx));
 
- if (b.grounded && !nearEdge && (Math.random() < 0.015 || (distY < -60 && Math.random() < 0.04))) {
+ if (b.grounded && !nearEdge && (Math.random() < 0.015 * step || (distY < -60 && Math.random() < 0.04 * step))) {
  b.vy = -14;
  b.grounded = false;
  }
 
- b.fireTimer--;
+ b.fireTimer -= step;
  if (b.fireTimer <= 0 && Math.abs(dist) < 400) {
  b.fireTimer = 60;
  const shootDir = Math.sign(dist) || 1;
@@ -1389,16 +1393,16 @@ Output JSON: { "elder_greeting": "..." }`;
  });
  }
  } else {
- b.vx *= 0.9;
+ b.vx *= Math.pow(0.9, step);
  }
 
- b.vy += this.gravity;
+ b.vy += this.gravity * step;
  if (b.vy > 18) b.vy = 18;
- b.x += b.vx;
+ b.x += b.vx * step;
  if (b.x < arenaLeft) { b.x = arenaLeft; b.vx = Math.abs(b.vx) * 0.4; }
  if (b.x > arenaRight) { b.x = arenaRight; b.vx = -Math.abs(b.vx) * 0.4; }
  this.resolveEntityTilesX(b);
- b.y += b.vy;
+ b.y += b.vy * step;
  b.grounded = false;
  this.resolveEntityTilesY(b);
 

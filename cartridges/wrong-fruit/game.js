@@ -142,6 +142,67 @@ function stagesForLesson(quizCount) {
  return Math.min(STAGES_PER_LESSON_MAX, Math.max(STAGES_PER_LESSON_MIN, n));
 }
 
+/** Course-overview prompts (e.g. "¿De qué trata X?") — fine once, dull on every fruit. */
+function isOverviewQuestion(q) {
+ const s = String(q?.question || '').toLowerCase();
+ return /de qu[eé] trata|qu[eé] cubre|what is .+ about\b|what does .+ cover|what covers\b/.test(s);
+}
+
+function quizKey(q) {
+ return `${String(q?.question || '').trim()}|${String(q?.correct || '').trim()}`.toLowerCase();
+}
+
+/** Prefer concrete quizzes; keep overview prompts at the end if anything else exists. */
+function orderQuizzes(pool) {
+ const meat = [];
+ const meta = [];
+ for (const q of pool) {
+ if (isOverviewQuestion(q)) meta.push(q);
+ else meat.push(q);
+ }
+ if (!meat.length) return shuffle(pool);
+ return [...shuffle(meat), ...shuffle(meta)];
+}
+
+/**
+ * When a lesson only has a thin quiz (often a single "what is this about?" card),
+ * pull more quizzes from the following curriculum lessons so the garden varies.
+ */
+async function expandQuizzesFromCurriculum(lesson, basePool, want = 8) {
+ const pool = [...(basePool || [])];
+ const seen = new Set(pool.map(quizKey));
+ if (pool.length >= want) return orderQuizzes(pool);
+
+ const arb = window.arborito;
+ const list = arb?.lesson?.list?.() || [];
+ if (!Array.isArray(list) || !list.length || !arb?.lesson?.at) return orderQuizzes(pool);
+
+ let start = -1;
+ const lid = lesson?.id;
+ if (lid != null) {
+ start = list.findIndex((L) => L && (L.id === lid || L.title === lesson.title));
+ }
+ if (start < 0) start = 0;
+
+ for (let i = start + 1; i < list.length && pool.length < want; i++) {
+ let follow = null;
+ try {
+ follow = await arb.lesson.at(i);
+ } catch (_) {
+ continue;
+ }
+ if (!follow) continue;
+ for (const q of buildQuizzes(follow)) {
+ const key = quizKey(q);
+ if (seen.has(key)) continue;
+ seen.add(key);
+ pool.push(q);
+ if (pool.length >= want) break;
+ }
+ }
+ return orderQuizzes(pool);
+}
+
 function sessionLessonCap() {
  const list = window.arborito?.lesson?.list?.() || [];
  const n = Array.isArray(list) ? list.length : 1;
@@ -278,12 +339,13 @@ function buildQuizzes(lesson) {
  pool.push({ question: card.question, correct, options: null, challenge: c, lessonId: lesson.id });
  }
  }
- return pool.map((q) => {
+ const built = pool.map((q) => {
  if (q.options?.length >= 2) return q;
  const distractors = shuffle([...new Set(allWrong.filter((w) => w !== q.correct))]).slice(0, 3);
  while (distractors.length < 3) distractors.push(t('wrongN', { n: distractors.length + 1 }));
  return { ...q, options: [q.correct, ...distractors.slice(0, 3)] };
  });
+ return orderQuizzes(built);
 }
 
 function shuffle(arr) {
@@ -512,6 +574,10 @@ class WrongFruit {
  return false;
  }
  this.quizzes = buildQuizzes(this.lesson);
+ // Thin lessons (intro "¿De qué trata…?") get filled from the next lessons.
+ if (this.quizzes.length < 4 || this.quizzes.every(isOverviewQuestion)) {
+ this.quizzes = await expandQuizzesFromCurriculum(this.lesson, this.quizzes, 8);
+ }
  this.quizIdx = 0;
  this.stagesThisLesson = stagesForLesson(this.quizzes.length);
  if (resetSession || !this.sessionLessonCap) {

@@ -4,6 +4,10 @@ Browser cartridges only. The app loads this repo via jsDelivr; bump **`meta.json
 
 ## Catalog
 
+### Wrong Fruit `1.1.1`
+
+- Garden sessions build a wider quiz pool from following lessons and prioritize concrete questions over course-overview prompts.
+
 ### Starship `1.0.1`
 
 - Mobile speech dialogue sits in the bottom safe band; touch controls and HUD hide while dialogue is open.
@@ -35,6 +39,6 @@ All cartridges ship as **`1.0.0`**.
 | `hacky-terminal` | 1.0.0 |
 | `memory` | 1.0.0 |
 | `starship` | 1.0.1 |
-| `wrong-fruit` | 1.0.1 |
+| `wrong-fruit` | 1.1.1 |
 
 See each cartridge’s `meta.json` for the shipping version string.

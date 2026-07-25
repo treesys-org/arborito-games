@@ -235,9 +235,9 @@ class Game {
  if (this.mode === 'space') {
  this.space.update(dt);
  } else if (this.mode === 'planet' && !this.planet.levelComplete) {
- this.planet.update();
+ this.planet.update(dt);
  } else if (this.mode === 'story' && this.story._returnMode === 'planet' && !this.planet.levelComplete) {
- this.planet.update();
+ this.planet.update(dt);
  }
 
  for (let i = this.particles.length - 1; i >= 0; i--) {

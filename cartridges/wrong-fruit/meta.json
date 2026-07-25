@@ -1,8 +1,8 @@
-{
+ {
   "name": "Wrong Fruit",
   "description": "Guide a hungry garden worm through short garden sessions. Eat fruits with the right answers; dodge hedges, rocks, and hostile garden gnomes.",
   "icon": "🐛",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": "Arborito Official",
   "descriptions": {
     "en": "Guide a hungry garden worm through short garden sessions. Eat fruits with the right answers; dodge hedges, rocks, and hostile garden gnomes.",
