@@ -203,8 +203,13 @@ class MemoryGame {
  index: 0,
  phase: 'front',
  currentLesson: null,
- currentCard: null
+ currentCard: null,
+ itemCursor: Object.create(null)
  };
+
+ /* Faces already shown this session — skip them on later rounds so
+ * curriculum-fill / AI top-ups do not recycle the same cards. */
+ this.usedFaces = new Set();
 
  this.state = {
  cards: [],
@@ -491,12 +496,16 @@ class MemoryGame {
  /* Cap the fresh top-up so huge courses don't produce 200-card
  * sessions when the user has zero SRS history. */
  const FRESH_CAP = 12;
- const queue = dueIndices.concat(freshIndices.slice(0, FRESH_CAP));
+ /* Shuffle fresh so consecutive sessions do not always drill the same
+ * first N lessons in curriculum order. */
+ const shuffledFresh = freshIndices.slice().sort(() => Math.random() - 0.5);
+ const queue = dueIndices.concat(shuffledFresh.slice(0, FRESH_CAP));
 
  this.review.queue = queue;
  this.review.dueCount = dueIndices.length;
  this.review.index = 0;
  this.review.currentLesson = null;
+ this.review.itemCursor = Object.create(null);
 
  this.els.loadState.classList.add('hidden');
  this._showReviewView();
@@ -576,8 +585,10 @@ class MemoryGame {
  }
  const usable = (challenges || []).filter((c) => this._challengeHasFace(c));
  if (!usable.length) return null;
- const ch = usable[this.review.index % usable.length];
- return this._challengeToFlashcard(ch, this.review.index);
+ const lessonId = String(lesson?.id || '');
+ const cursor = (lessonId && this.review.itemCursor[lessonId]) || 0;
+ const ch = usable[cursor % usable.length];
+ return this._challengeToFlashcard(ch, cursor);
  }
 
  _challengeHasFace(c) {
@@ -758,16 +769,44 @@ class MemoryGame {
  _gradeReviewCard(quality) {
  if (this.review.phase !== 'back') return;
  const lesson = this.review.currentLesson;
- if (lesson && window.arborito?.memory?.report) {
- try { window.arborito.memory.report(lesson.id, quality); } catch (_) {}
- }
+
  if (quality >= 4) {
  try { this.fx?.playMatchSound?.(2); } catch (_) {}
  try { window.arborito?.xp?.(50); } catch (_) {}
  } else if (quality > 0) {
  try { this.fx?.playFlipSound?.(); } catch (_) {}
  }
+
+ /* Advance within the lesson's questionnaire before leaving the branch,
+ * so multi-item quizzes are not stuck on the same face every visit. */
+ const lessonId = lesson?.id != null ? String(lesson.id) : '';
+ let stayOnLesson = false;
+ if (lessonId && quality >= 4) {
+ let usableCount = 0;
+ try {
+ const challenges = window.arborito?.challenge?.fromLesson?.(lesson) || [];
+ usableCount = challenges.filter((c) => this._challengeHasFace(c)).length;
+ } catch (_) {
+ usableCount = 0;
+ }
+ const nextCursor = (this.review.itemCursor[lessonId] || 0) + 1;
+ this.review.itemCursor[lessonId] = nextCursor;
+ const MAX_PER_LESSON = 3;
+ if (nextCursor < usableCount && nextCursor < MAX_PER_LESSON) {
+ stayOnLesson = true;
+ }
+ } else if (lessonId) {
+ this.review.itemCursor[lessonId] = (this.review.itemCursor[lessonId] || 0) + 1;
+ }
+
+ /* One SRS update per branch visit (not per item), so multi-item drills
+ * do not inflate the interval. */
+ if (!stayOnLesson) {
+ if (lesson && window.arborito?.memory?.report) {
+ try { window.arborito.memory.report(lesson.id, quality); } catch (_) {}
+ }
  this.review.index += 1;
+ }
  void this._renderNextReviewCard();
  }
 
@@ -880,7 +919,17 @@ class MemoryGame {
  }
 
  const pairCount = pairsForLevel(this.progress.level);
- const pairs = await window.arborito.matchPairs(lesson, { count: pairCount });
+ const excludeFaces = Array.from(this.usedFaces || []);
+ let pairs = await window.arborito.matchPairs(lesson, {
+ count: pairCount,
+ excludeFaces
+ });
+ /* If exclusions emptied the pool, clear session memory and retry once. */
+ if ((!pairs || !pairs.length) && excludeFaces.length) {
+ this.usedFaces = new Set();
+ pairs = await window.arborito.matchPairs(lesson, { count: pairCount });
+ }
+ this._rememberPairFaces(pairs);
 
  return {
  title: lesson.title,
@@ -889,6 +938,25 @@ class MemoryGame {
  isDue,
  lesson
  };
+ }
+
+ /** Record card faces so later rounds prefer fresh curriculum material. */
+ _rememberPairFaces(pairs) {
+ if (!this.usedFaces) this.usedFaces = new Set();
+ const norm = (s) =>
+ String(s || '')
+ .replace(/\s+/g, ' ')
+ .trim()
+ .toLowerCase()
+ .replace(/^❓\s*/, '')
+ .replace(/[^\p{L}\p{N}\s]/gu, '');
+ (pairs || []).forEach((p) => {
+ if (!p) return;
+ const nt = norm(p.t);
+ const nd = norm(p.d);
+ if (nt) this.usedFaces.add(nt);
+ if (nd) this.usedFaces.add(nd);
+ });
  }
 
  handleError(msg) {
