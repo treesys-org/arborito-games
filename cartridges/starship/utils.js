@@ -400,7 +400,7 @@ export const Sprites = {
         ctx.fillRect(x+20, y+15, 2, 2);
     },
 
-    drawSpaceShip: (ctx, angle, thrust, shieldPct, frame) => {
+    drawSpaceShip: (ctx, angle, thrust, shieldPct, frame, opts = {}) => {
         ctx.save();
         ctx.rotate(angle);
 
@@ -453,7 +453,9 @@ export const Sprites = {
         ctx.beginPath(); ctx.moveTo(10, 6); ctx.lineTo(-8, 10); ctx.stroke();
 
         ctx.fillStyle = '#0ea5e9';
-        ctx.shadowColor = '#22d3ee'; ctx.shadowBlur = 15;
+        if (!opts.lowQuality) {
+            ctx.shadowColor = '#22d3ee'; ctx.shadowBlur = 15;
+        }
         ctx.beginPath();
         ctx.moveTo(12, 0); ctx.lineTo(-2, 7); ctx.lineTo(-2, -7); ctx.closePath(); ctx.fill();
         ctx.shadowBlur = 0;

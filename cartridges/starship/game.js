@@ -2,6 +2,7 @@ import { SpaceEngine } from './space.js';
 import { PlatformerEngine } from './platformer.js';
 import { StoryEngine } from './story.js';
 import { InputManager, bindMobileTap } from './utils.js';
+import { uiCopy, isLowQualityDevice } from './i18n.js';
 
 /* Platform helpers come from the SDK (window.arborito.platform.*).
  * Aliased so the rest of the file keeps its existing names. */
@@ -13,10 +14,14 @@ const initViewportListeners = _platform.onScreenChange || (() => () => {});
 class Game {
  constructor() {
  this.canvas = document.getElementById('game-canvas');
- this.ctx = this.canvas.getContext('2d');
+ this.ctx = this.canvas.getContext('2d', { alpha: false });
  const { width, height } = getViewportSize();
- this.width = width;
- this.height = height;
+ this.lowQuality = isLowQualityDevice();
+ /* Cap buffer size on phones so fill-rate stays manageable. */
+ const maxEdge = this.lowQuality ? 1280 : 1920;
+ const scale = Math.min(1, maxEdge / Math.max(width, height, 1));
+ this.width = Math.max(1, Math.floor(width * scale));
+ this.height = Math.max(1, Math.floor(height * scale));
  this.canvas.width = this.width;
  this.canvas.height = this.height;
 
@@ -25,6 +30,8 @@ class Game {
  this.mode = 'prologue';
  this.shakeTimer = 0;
  this.time = 0;
+ this.dt = 1;
+ this._lastTs = 0;
  this.vignetteCanvas = null;
 
  this.space = new SpaceEngine(this);
@@ -46,8 +53,10 @@ class Game {
  initListeners() {
  const onViewportChange = () => {
  const { width, height } = getViewportSize();
- this.width = width;
- this.height = height;
+ const maxEdge = this.lowQuality ? 1280 : 1920;
+ const scale = Math.min(1, maxEdge / Math.max(width, height, 1));
+ this.width = Math.max(1, Math.floor(width * scale));
+ this.height = Math.max(1, Math.floor(height * scale));
  this.canvas.width = this.width;
  this.canvas.height = this.height;
  this.space.resetJoystick();
@@ -142,13 +151,13 @@ class Game {
  const hint = toast?.querySelector('.control-toast-hint');
  if (!toast || !body) return;
 
- if (title) title.textContent = mode === 'space' ? 'EN ÓRBITA' : 'EN SUPERFICIE';
- if (hint) hint.textContent = 'Toca para continuar';
+ if (title) title.textContent = mode === 'space' ? uiCopy('toastTitleSpace') : uiCopy('toastTitlePlanet');
+ if (hint) hint.textContent = uiCopy('toastHint');
 
  if (mode === 'space') {
- body.innerHTML = '<div style="color:#cbd5e1">Propulsa hacia un planeta del radar. Cuando estés cerca, aparecerá <strong style="color:#22c55e">LAND</strong>.</div>';
+ body.innerHTML = `<div style="color:#cbd5e1">${uiCopy('toastSpace')}</div>`;
  } else if (mode === 'planet') {
- body.innerHTML = '<div style="color:#cbd5e1">Muévete y salta. Acércate a los marcianos, verás <strong style="color:#22c55e">TALK</strong>. E.D.E.N. te irá contando el resto.</div>';
+ body.innerHTML = `<div style="color:#cbd5e1">${uiCopy('toastPlanet')}</div>`;
  } else {
  return;
  }
@@ -216,11 +225,14 @@ class Game {
  this.shakeTimer = amount;
  }
 
- loop() {
+ loop(ts = 0) {
  this.time++;
+ const dt = this._lastTs ? Math.min((ts - this._lastTs) / 16.667, 2.5) : 1;
+ this._lastTs = ts;
+ this.dt = dt;
 
  if (this.mode === 'space') {
- this.space.update();
+ this.space.update(dt);
  } else if (this.mode === 'planet' && !this.planet.levelComplete) {
  this.planet.update();
  } else if (this.mode === 'story' && this.story._returnMode === 'planet' && !this.planet.levelComplete) {
@@ -229,9 +241,9 @@ class Game {
 
  for (let i = this.particles.length - 1; i >= 0; i--) {
  const p = this.particles[i];
- p.x += p.vx;
- p.y += p.vy;
- p.life -= 0.03;
+ p.x += p.vx * dt;
+ p.y += p.vy * dt;
+ p.life -= 0.03 * dt;
  if (p.life <= 0) this.particles.splice(i, 1);
  }
 
@@ -240,7 +252,7 @@ class Game {
  if (this.shakeTimer > 0) {
  const mag = this.shakeTimer;
  this.ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
- this.shakeTimer *= 0.9;
+ this.shakeTimer *= Math.pow(0.9, dt);
  if (this.shakeTimer < 0.5) this.shakeTimer = 0;
  }
 
@@ -260,7 +272,9 @@ class Game {
  });
  this.ctx.globalAlpha = 1;
 
+ if (!this.lowQuality) {
  this.ctx.drawImage(this.ensureVignette(), 0, 0);
+ }
 
  this.ctx.restore();
  requestAnimationFrame(this.loop);

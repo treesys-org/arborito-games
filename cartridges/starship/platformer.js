@@ -1,4 +1,5 @@
 import { SeededRandom, rectIntersect, Sprites, bindMobileTap } from './utils.js';
+import { cartridgeLang, uiCopy } from './i18n.js';
 
 const BOSS_NAMES = ['Eco del Vacío', 'Sombra Primordial', 'Cantor del Olvido'];
 
@@ -91,8 +92,7 @@ const PLANET_COPY = {
 };
 
 function planetLangCode() {
- const u = window.arborito && window.arborito.user && window.arborito.user.lang;
- return String(u || 'EN').toUpperCase() === 'ES' ? 'ES' : 'EN';
+ return cartridgeLang();
 }
 
 function planetCopy(key, vars = {}, lang = planetLangCode()) {
@@ -1131,9 +1131,11 @@ Output JSON: { "elder_greeting": "..." }`;
  if (this.ui.btnInteract) {
  this.ui.btnInteract.style.display = nearby ? 'flex' : 'none';
  if (isShip) {
- this.ui.btnInteract.textContent = this.bossDefeated && this.allMartiansTalked() ? 'GO' : 'INFO';
+ this.ui.btnInteract.textContent = this.bossDefeated && this.allMartiansTalked()
+ ? uiCopy('btnGo')
+ : uiCopy('btnInfo');
  } else {
- this.ui.btnInteract.textContent = 'TALK';
+ this.ui.btnInteract.textContent = uiCopy('btnTalk');
  }
  }
 

@@ -1,10 +1,12 @@
 import { SeededRandom, ArtGen, Sprites } from './utils.js';
+import { uiCopy, isLowQualityDevice } from './i18n.js';
 
 const SECTOR_NAMES = ['ALFA', 'BETA', 'GAMMA', 'DELTA', 'ÉPSILON', 'ZETA'];
 
 export class SpaceEngine {
  constructor(game) {
  this.game = game;
+ this.lowQuality = !!(game.lowQuality || isLowQualityDevice());
  this.ship = {
  x: 0, y: 0, vx: 0, vy: 0, angle: -Math.PI / 2,
  fuel: 100, maxFuel: 100,
@@ -25,6 +27,8 @@ export class SpaceEngine {
  this.btnLand = document.getElementById('btn-land');
  this.btnWarp = document.getElementById('btn-warp');
  this.btnFire = document.getElementById('btn-fire');
+ if (this.btnLand) this.btnLand.textContent = uiCopy('btnLand');
+ if (this.btnWarp) this.btnWarp.textContent = uiCopy('btnWarp');
 
  this.ui = {
  vel: document.getElementById('hud-vel'),
@@ -38,11 +42,14 @@ export class SpaceEngine {
  radar: document.getElementById('radar-canvas')
  };
 
- this.bgCanvas = ArtGen.createNebulaBackground(2000, 2000, 'galaxy-nebula');
+ const nebulaSize = this.lowQuality ? 1024 : 2000;
+ this.bgCanvas = ArtGen.createNebulaBackground(nebulaSize, nebulaSize, 'galaxy-nebula');
+ this._nebulaSize = nebulaSize;
+ const starArea = this.lowQuality ? 1200 : 2000;
  this.starLayers = [
- { stars: ArtGen.createStarLayer(120, 2000, 2000, 'stars-far'), parallax: 0.15, size: 1 },
- { stars: ArtGen.createStarLayer(80, 2000, 2000, 'stars-mid'), parallax: 0.35, size: 1.5 },
- { stars: ArtGen.createStarLayer(40, 2000, 2000, 'stars-near'), parallax: 0.6, size: 2 }
+ { stars: ArtGen.createStarLayer(this.lowQuality ? 60 : 120, starArea, starArea, 'stars-far'), parallax: 0.15, size: 1 },
+ { stars: ArtGen.createStarLayer(this.lowQuality ? 40 : 80, starArea, starArea, 'stars-mid'), parallax: 0.35, size: 1.5 },
+ { stars: ArtGen.createStarLayer(this.lowQuality ? 24 : 40, starArea, starArea, 'stars-near'), parallax: 0.6, size: 2 }
  ];
  this.starLayerCanvases = this.starLayers.map(layer => this.bakeStarLayer(layer));
  this.sunGlowCache = new Map();
@@ -62,8 +69,8 @@ export class SpaceEngine {
  }
 
  bakeStarLayer(layer) {
- /* Pre-baked 8000px tile wraps via wrapCoord so parallax never regenerates stars per frame. */
- const size = 8000;
+ /* Smaller tiles on mobile — 8000² blits crush fill-rate. */
+ const size = this.lowQuality ? 1536 : 3072;
  const canvas = document.createElement('canvas');
  canvas.width = size;
  canvas.height = size;
@@ -84,21 +91,22 @@ export class SpaceEngine {
  getSunGlowCanvas(sys) {
  const key = sys.index;
  if (this.sunGlowCache.has(key)) return this.sunGlowCache.get(key);
+ const dim = this.lowQuality ? 640 : 1300;
  const c = document.createElement('canvas');
- c.width = 1300;
- c.height = 1300;
+ c.width = dim;
+ c.height = dim;
  const ctx = c.getContext('2d');
- const cx = 650, cy = 650;
- const grad = ctx.createRadialGradient(cx, cy, 80, cx, cy, 650);
+ const cx = dim / 2, cy = dim / 2;
+ const grad = ctx.createRadialGradient(cx, cy, dim * 0.06, cx, cy, dim / 2);
  grad.addColorStop(0, sys.sunGlow || 'rgba(253, 224, 71, 0.35)');
  grad.addColorStop(0.4, 'rgba(234, 179, 8, 0.06)');
  grad.addColorStop(1, 'transparent');
  ctx.fillStyle = grad;
  ctx.beginPath();
- ctx.arc(cx, cy, 650, 0, Math.PI * 2);
+ ctx.arc(cx, cy, dim / 2, 0, Math.PI * 2);
  ctx.fill();
- this.sunGlowCache.set(key, c);
- return c;
+ this.sunGlowCache.set(key, { canvas: c, dim });
+ return this.sunGlowCache.get(key);
  }
 
  initTouch() {
@@ -268,14 +276,19 @@ export class SpaceEngine {
  }
  }
 
- update() {
+ update(dt = 1) {
  if (this.game.mode === 'story') return;
  this.frame++;
+ const step = Number.isFinite(dt) && dt > 0 ? dt : 1;
+ /* Slightly snappier on touch devices so low FPS still feels responsive. */
+ const thrustBase = this.lowQuality ? 0.72 : 0.55;
+ const stickLerp = this.lowQuality ? 0.2 : 0.14;
+ const camFollow = this.lowQuality ? 0.14 : 0.1;
 
  let thrust = 0, turn = 0;
  const keys = this.input.keys;
 
- if (keys['ArrowUp'] || keys['w'] || keys['W']) thrust = 0.55;
+ if (keys['ArrowUp'] || keys['w'] || keys['W']) thrust = thrustBase;
  if (keys['ArrowLeft'] || keys['a'] || keys['A']) turn = -0.06;
  if (keys['ArrowRight'] || keys['d'] || keys['D']) turn = 0.06;
 
@@ -286,8 +299,8 @@ export class SpaceEngine {
  let diff = targetAngle - this.ship.angle;
  while (diff < -Math.PI) diff += Math.PI * 2;
  while (diff > Math.PI) diff -= Math.PI * 2;
- this.ship.angle += diff * 0.12;
- thrust = Math.min(mag, 1.0) * 0.55;
+ this.ship.angle += diff * (1 - Math.pow(1 - stickLerp, step));
+ thrust = Math.min(mag, 1.0) * thrustBase;
  }
  }
 
@@ -299,51 +312,54 @@ export class SpaceEngine {
  this.game.shake(8);
  }
  if (this.warpActive) {
- this.warpTimer--;
- const warpBoost = 4.0;
+ this.warpTimer -= step;
+ const warpBoost = 4.0 * step;
  this.ship.vx += Math.cos(this.ship.angle) * warpBoost;
  this.ship.vy += Math.sin(this.ship.angle) * warpBoost;
- for (let i = 0; i < 3; i++) {
+ if (!this.lowQuality || this.frame % 2 === 0) {
+ for (let i = 0; i < (this.lowQuality ? 1 : 3); i++) {
  this.game.spawnParticle(
  this.ship.x - Math.cos(this.ship.angle) * 30,
  this.ship.y - Math.sin(this.ship.angle) * 30,
  i === 0 ? '#22d3ee' : '#a78bfa', 4, 5
-);
+ );
+ }
  }
  if (this.warpTimer <= 0) this.warpActive = false;
  } else if (thrust > 0 && this.ship.fuel > 0) {
- this.ship.vx += Math.cos(this.ship.angle) * thrust;
- this.ship.vy += Math.sin(this.ship.angle) * thrust;
- this.ship.fuel = Math.max(0, this.ship.fuel - 0.08);
- if (this.frame % 3 === 0) {
+ this.ship.vx += Math.cos(this.ship.angle) * thrust * step;
+ this.ship.vy += Math.sin(this.ship.angle) * thrust * step;
+ this.ship.fuel = Math.max(0, this.ship.fuel - 0.08 * step);
+ if (this.frame % (this.lowQuality ? 5 : 3) === 0) {
  const bx = this.ship.x - Math.cos(this.ship.angle) * 28;
  const by = this.ship.y - Math.sin(this.ship.angle) * 28;
  this.game.spawnParticle(bx, by, '#3b82f6', 2, 6);
  }
  }
 
- this.ship.angle += turn;
- this.ship.vx *= 0.965;
- this.ship.vy *= 0.965;
- this.ship.x += this.ship.vx;
- this.ship.y += this.ship.vy;
+ this.ship.angle += turn * step;
+ this.ship.vx *= Math.pow(0.965, step);
+ this.ship.vy *= Math.pow(0.965, step);
+ this.ship.x += this.ship.vx * step;
+ this.ship.y += this.ship.vy * step;
 
  this.systems.forEach(sys => {
  const d = Math.hypot(this.ship.x - sys.x, this.ship.y - sys.y);
- if (d < 500) this.ship.fuel = Math.min(this.ship.maxFuel, this.ship.fuel + 0.15);
- if (d < 800) this.ship.shield = Math.min(this.ship.maxShield, this.ship.shield + 0.08);
+ if (d < 500) this.ship.fuel = Math.min(this.ship.maxFuel, this.ship.fuel + 0.15 * step);
+ if (d < 800) this.ship.shield = Math.min(this.ship.maxShield, this.ship.shield + 0.08 * step);
  });
 
- this.camera.x += (this.ship.x - this.game.width / 2 - this.camera.x) * 0.08;
- this.camera.y += (this.ship.y - this.game.height / 2 - this.camera.y) * 0.08;
+ const camT = 1 - Math.pow(1 - camFollow, step);
+ this.camera.x += (this.ship.x - this.game.width / 2 - this.camera.x) * camT;
+ this.camera.y += (this.ship.y - this.game.height / 2 - this.camera.y) * camT;
 
  this.systems.forEach(sys => {
  sys.planets.forEach(p => {
- p.angle += p.orbitSpeed;
+ p.angle += p.orbitSpeed * step;
  p.x = sys.x + Math.cos(p.angle) * p.dist;
  p.y = sys.y + Math.sin(p.angle) * p.dist;
  if (p.moon) {
- p.moon.angle += p.moon.speed;
+ p.moon.angle += p.moon.speed * step;
  }
  p.collected = this.game.story?.isPlanetDone(p) || false;
  });
@@ -355,8 +371,8 @@ export class SpaceEngine {
  this.updateProjectiles();
  this.checkProximity();
  this.checkSector();
- this.updateHUD();
- if (this.frame % 8 === 0) this.drawRadar();
+ if (this.frame % (this.lowQuality ? 4 : 2) === 0) this.updateHUD();
+ if (this.frame % (this.lowQuality ? 12 : 8) === 0) this.drawRadar();
  }
 
  fire() {
@@ -592,14 +608,16 @@ export class SpaceEngine {
  }
 
  draw(ctx) {
- const bgSize = 2000;
+ const bgSize = this._nebulaSize || 2000;
  const nebulaOffX = -this.camera.x * 0.3;
  const nebulaOffY = -this.camera.y * 0.3;
  const startX = Math.floor((this.camera.x * 0.3) / bgSize) * bgSize;
  const startY = Math.floor((this.camera.y * 0.3) / bgSize) * bgSize;
 
- for (let x = startX - bgSize; x < startX + bgSize * 2; x += bgSize) {
- for (let y = startY - bgSize; y < startY + bgSize * 2; y += bgSize) {
+ /* On mobile draw one nebula tile instead of a 3×3 grid. */
+ const pad = this.lowQuality ? 0 : bgSize;
+ for (let x = startX - pad; x < startX + bgSize + pad; x += bgSize) {
+ for (let y = startY - pad; y < startY + bgSize + pad; y += bgSize) {
  ctx.drawImage(this.bgCanvas, x + nebulaOffX, y + nebulaOffY);
  }
  }
@@ -689,8 +707,11 @@ export class SpaceEngine {
  ctx.fillStyle = '#22c55e';
  ctx.font = 'bold 14px system-ui, sans-serif';
  ctx.textAlign = 'center';
+ if (!this.lowQuality) {
  ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
- ctx.fillText('[ESPACIO] ATERRIZAR', 0, -45);
+ }
+ ctx.fillText(uiCopy('landPrompt'), 0, -45);
+ ctx.shadowBlur = 0;
  ctx.restore();
  }
 
@@ -714,13 +735,14 @@ export class SpaceEngine {
  drawSun(ctx, sys) {
  const pulse = 1 + Math.sin(this.frame * 0.03) * 0.05;
  const glow = this.getSunGlowCanvas(sys);
+ const dim = glow.dim;
  ctx.save();
  ctx.globalCompositeOperation = 'screen';
- ctx.drawImage(glow, sys.x - 650, sys.y - 650, 1300, 1300);
+ ctx.drawImage(glow.canvas, sys.x - dim / 2, sys.y - dim / 2, dim, dim);
  ctx.globalCompositeOperation = 'source-over';
  ctx.restore();
 
- if (Math.hypot(this.ship.x - sys.x, this.ship.y - sys.y) < 3500) {
+ if (!this.lowQuality && Math.hypot(this.ship.x - sys.x, this.ship.y - sys.y) < 3500) {
  for (let i = 0; i < 4; i++) {
  const a = (this.frame * 0.008 + i * Math.PI / 2);
  const flareLen = 120 + Math.sin(this.frame * 0.05 + i) * 40;
@@ -817,7 +839,10 @@ export class SpaceEngine {
  ctx.save();
  ctx.translate(this.ship.x, this.ship.y);
  const thrust = (this.input.keys['ArrowUp'] || this.input.keys['w'] || this.input.keys['W'] || this.stick.active) ? 1 : 0;
- Sprites.drawSpaceShip(ctx, this.ship.angle, this.warpActive ? 2 : thrust, this.ship.shield / 100, this.frame);
+ Sprites.drawSpaceShip(
+ ctx, this.ship.angle, this.warpActive ? 2 : thrust, this.ship.shield / 100, this.frame,
+ { lowQuality: this.lowQuality }
+ );
  ctx.restore();
  }
 }
