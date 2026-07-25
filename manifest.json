@@ -5,7 +5,7 @@
         "description": "Card battle with a shared deck and five cards always on the table. Each round both pick a card for the other to answer. Reach 100 points before Alonso. Combos, perfect blocks, shield, and crits.",
         "icon": "\ud83c\udccf",
         "path": "./cartridges/alonso-duel/index.html",
-        "version": "1.0.0",
+        "version": "1.0.1",
         "author": "Arborito Official",
         "descriptions": {
             "en": "Card battle with a shared deck and five cards always on the table. Each round both pick a card for the other to answer. Reach 100 points before Alonso. Combos, perfect blocks, shield, and crits.",
@@ -57,7 +57,7 @@
         "description": "Two modes: Pairs matches terms on a fast grid; Review shows a question-mark card \u2014 tap to flip, see the answer, then mark Good or Review so SRS schedules the next one.",
         "icon": "\ud83c\udf3a",
         "path": "./cartridges/memory/index.html",
-        "version": "1.0.1",
+        "version": "1.0.2",
         "author": "Arborito Official",
         "descriptions": {
             "en": "Two modes: Pairs matches terms on a fast grid; Review shows a question-mark card \u2014 tap to flip, see the answer, then mark Good or Review so SRS schedules the next one.",
@@ -83,7 +83,7 @@
         "description": "Guide a hungry garden worm through short garden sessions. Eat fruits with the right answers; dodge hedges, rocks, and hostile garden gnomes.",
         "icon": "\ud83d\udc1b",
         "path": "./cartridges/wrong-fruit/index.html",
-        "version": "1.1.1",
+        "version": "1.1.2",
         "author": "Arborito Official",
         "descriptions": {
             "en": "Guide a hungry garden worm through short garden sessions. Eat fruits with the right answers; dodge hedges, rocks, and hostile garden gnomes.",

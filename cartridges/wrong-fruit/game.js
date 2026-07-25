@@ -165,12 +165,16 @@ function orderQuizzes(pool) {
 }
 
 /**
- * When a lesson only has a thin quiz (often a single "what is this about?" card),
- * pull more quizzes from the following curriculum lessons so the garden varies.
+ * When a lesson has no playable meat (empty or only overview prompts),
+ * pull quizzes from other playlist lessons. Skip keys already used this
+ * session so advancing does not re-show borrowed questions.
  */
-async function expandQuizzesFromCurriculum(lesson, basePool, want = 8) {
+async function expandQuizzesFromCurriculum(lesson, basePool, want = 8, avoidKeys = null) {
  const pool = [...(basePool || [])];
  const seen = new Set(pool.map(quizKey));
+ for (const k of avoidKeys || []) {
+ if (k) seen.add(k);
+ }
  if (pool.length >= want) return orderQuizzes(pool);
 
  const arb = window.arborito;
@@ -184,7 +188,14 @@ async function expandQuizzesFromCurriculum(lesson, basePool, want = 8) {
  }
  if (start < 0) start = 0;
 
- for (let i = start + 1; i < list.length && pool.length < want; i++) {
+ const after = [];
+ const before = [];
+ for (let i = start + 1; i < list.length; i++) after.push(i);
+ for (let i = 0; i < start; i++) before.push(i);
+ const order = shuffle(after).concat(shuffle(before));
+
+ for (const i of order) {
+ if (pool.length >= want) break;
  let follow = null;
  try {
  follow = await arb.lesson.at(i);
@@ -432,6 +443,8 @@ class WrongFruit {
  this.lesson = null;
  this.quizzes = [];
  this.quizIdx = 0;
+ /* Quiz keys already shown this session — expand must not re-borrow them. */
+ this.usedQuizKeys = new Set();
  this.stage = 1;
  this.stageInLesson = 1;
  this.stagesThisLesson = STAGES_PER_LESSON_MIN;
@@ -573,10 +586,23 @@ class WrongFruit {
  this.quizzes = [];
  return false;
  }
+ if (resetSession) this.usedQuizKeys = new Set();
  this.quizzes = buildQuizzes(this.lesson);
- // Thin lessons (intro "¿De qué trata…?") get filled from the next lessons.
- if (this.quizzes.length < 4 || this.quizzes.every(isOverviewQuestion)) {
- this.quizzes = await expandQuizzesFromCurriculum(this.lesson, this.quizzes, 8);
+ /* Pad only when this lesson has nothing meaty — same rule as Memory
+ * (do not pad every thin lesson with the rest of the course). */
+ const needsPad =
+ !this.quizzes.length || this.quizzes.every(isOverviewQuestion);
+ if (needsPad) {
+ this.quizzes = await expandQuizzesFromCurriculum(
+ this.lesson,
+ this.quizzes,
+ 8,
+ this.usedQuizKeys
+ );
+ }
+ for (const q of this.quizzes) {
+ const key = quizKey(q);
+ if (key) this.usedQuizKeys.add(key);
  }
  this.quizIdx = 0;
  this.stagesThisLesson = stagesForLesson(this.quizzes.length);
@@ -604,6 +630,11 @@ class WrongFruit {
  document.getElementById('start-screen').classList.add('hidden');
  document.getElementById('end-screen').classList.add('hidden');
  document.getElementById('app').classList.remove('hidden');
+ this.usedQuizKeys = new Set();
+ for (const q of this.quizzes) {
+ const key = quizKey(q);
+ if (key) this.usedQuizKeys.add(key);
+ }
  this.sessionLessonCap = sessionLessonCap();
  this.sessionLessonIndex = 1;
  this.stagesThisLesson = stagesForLesson(this.quizzes.length);

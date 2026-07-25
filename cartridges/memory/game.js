@@ -607,7 +607,7 @@ class MemoryGame {
  (clozeIdx && def) ||
  (steps.length >= 2 && (concept || ans)) ||
  (concept && ans)
-);
+ );
  }
 
  _challengeToFlashcard(c, pass = 0) {
@@ -920,14 +920,27 @@ class MemoryGame {
 
  const pairCount = pairsForLevel(this.progress.level);
  const excludeFaces = Array.from(this.usedFaces || []);
+ /* Use this lesson only. Curriculum fill made every round look the same
+ * when advancing (boards were mostly "the rest of the course"). */
  let pairs = await window.arborito.matchPairs(lesson, {
  count: pairCount,
+ fillFromCurriculum: false,
  excludeFaces
  });
- /* If exclusions emptied the pool, clear session memory and retry once. */
+ /* Borrow from other lessons only when this one has zero playable pairs. */
+ if (!pairs || !pairs.length) {
+ pairs = await window.arborito.matchPairs(lesson, {
+ count: pairCount,
+ fillFromCurriculum: true,
+ excludeFaces
+ });
+ }
  if ((!pairs || !pairs.length) && excludeFaces.length) {
  this.usedFaces = new Set();
- pairs = await window.arborito.matchPairs(lesson, { count: pairCount });
+ pairs = await window.arborito.matchPairs(lesson, {
+ count: pairCount,
+ fillFromCurriculum: true
+ });
  }
  this._rememberPairFaces(pairs);
 

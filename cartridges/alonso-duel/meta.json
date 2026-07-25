@@ -2,7 +2,7 @@
   "name": "Alonso Duel",
   "description": "Card battle with a shared deck and five cards always on the table. Each round both pick a card for the other to answer. Reach 100 points before Alonso. Combos, perfect blocks, shield, and crits.",
   "icon": "🃏",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Arborito Official",
   "descriptions": {
     "en": "Card battle with a shared deck and five cards always on the table. Each round both pick a card for the other to answer. Reach 100 points before Alonso. Combos, perfect blocks, shield, and crits.",

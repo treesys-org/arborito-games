@@ -319,6 +319,12 @@ function cardGlyph(name) {
 
 function getLessonChallenges(lesson) {
  if (!lesson) return [];
+ try {
+ const from = window.arborito?.challenge?.fromLesson?.(lesson);
+ if (Array.isArray(from) && from.length) return from;
+ } catch (_) {
+ /* fall through to raw lesson fields */
+ }
  if (lesson.challenges?.length) return lesson.challenges;
  if (lesson.challenge) return [lesson.challenge];
  return [];
