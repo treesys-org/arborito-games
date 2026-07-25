@@ -414,6 +414,27 @@
  }
  #planet-objective strong { color: #22d3ee; }
  #planet-objective.is-done { color: #86efac; }
+ #planet-controls-hint {
+ margin-top: 0.35rem;
+ font-size: 0.68rem;
+ color: #fecaca;
+ line-height: 1.35;
+ font-family: system-ui, sans-serif;
+ font-weight: 600;
+ letter-spacing: 0.02em;
+ }
+ #planet-controls-hint kbd {
+ display: inline-block;
+ padding: 0.05rem 0.3rem;
+ margin: 0 1px;
+ border-radius: 0.2rem;
+ background: rgba(239, 68, 68, 0.25);
+ border: 1px solid rgba(239, 68, 68, 0.45);
+ font-family: inherit;
+ font-size: 0.65rem;
+ color: #fecaca;
+ }
+ #planet-controls-hint.hidden { display: none; }
  #context-prompt {
  position: absolute;
  bottom: max(9.5rem, calc(env(safe-area-inset-bottom, 0px) + 8rem));
@@ -992,7 +1013,10 @@
  <div id="health-bar"><div id="health-fill"></div></div>
  <div id="ammo-display">Munición 0 · Cristales 0/3</div>
  </div>
- <div class="planet-hud-card" id="planet-objective">Habla con el Anciano cerca de tu nave.</div>
+ <div class="planet-hud-card">
+ <div id="planet-objective">Habla con el Anciano cerca de tu nave.</div>
+ <div id="planet-controls-hint" class="hidden"></div>
+ </div>
  </div>
  <div id="context-prompt"></div>
  

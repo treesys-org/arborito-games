@@ -25,6 +25,7 @@ const UI_COPY = {
         toastHintKeys: 'Pulsa una tecla para continuar',
         dialogueContinue: 'TOCA PARA CONTINUAR ▶',
         dialogueContinueKeys: 'PULSA ESPACIO O E ▶',
+        shootHintKeys: 'Dispara con <kbd>R</kbd>',
         landPrompt: '[ESPACIO] ATERRIZAR',
     },
     EN: {
@@ -47,6 +48,7 @@ const UI_COPY = {
         toastHintKeys: 'Press any key to continue',
         dialogueContinue: 'TAP TO CONTINUE ▶',
         dialogueContinueKeys: 'PRESS SPACE OR E ▶',
+        shootHintKeys: 'Shoot with <kbd>R</kbd>',
         landPrompt: '[SPACE] LAND',
     },
 };

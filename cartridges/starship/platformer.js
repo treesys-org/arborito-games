@@ -228,6 +228,7 @@ export class PlatformerEngine {
  healthFill: document.getElementById('health-fill'),
  ammoDisplay: document.getElementById('ammo-display'),
  planetObjective: document.getElementById('planet-objective'),
+ planetControlsHint: document.getElementById('planet-controls-hint'),
  contextPrompt: document.getElementById('context-prompt'),
  deathScreen: document.getElementById('death-screen'),
  btnInteract: document.getElementById('btn-interact')
@@ -355,6 +356,7 @@ export class PlatformerEngine {
  this.ui.layer.classList.remove('hidden');
  this.ui.deathScreen.classList.add('hidden');
  this.planet = planet;
+ this.syncControlsHint();
 
  this.theme = {
  ground: planet.color || '#334155',
@@ -1458,7 +1460,20 @@ Output JSON: { "elder_greeting": "..." }`;
  this.ui.planetObjective.classList.toggle(
  'is-done',
  this.bossDefeated && this.allMartiansTalked() && this.crystalsCollected >= this.crystalsRequired
-);
+ );
+ }
+ this.syncControlsHint();
+ }
+
+ syncControlsHint() {
+ const el = this.ui.planetControlsHint;
+ if (!el) return;
+ if (usesKeyboardHints()) {
+ el.innerHTML = uiCopy('shootHintKeys');
+ el.classList.remove('hidden');
+ } else {
+ el.classList.add('hidden');
+ el.innerHTML = '';
  }
  }
 

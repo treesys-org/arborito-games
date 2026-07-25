@@ -95,7 +95,7 @@ export class StoryEngine {
 
  bindMobileTap(this.ui.box, () => this.advance());
  document.addEventListener('keydown', (e) => {
- if (this.isShowing && (e.key === 'Enter' || e.key === ' ')) {
+ if (this.isShowing && (e.key === 'Enter' || e.key === ' ' || e.key === 'e' || e.key === 'E')) {
  e.preventDefault();
  this.advance();
  }
