@@ -1,0 +1,11 @@
+{
+  "name": "Lengua Suelta",
+  "description": "Match the client's requested cut from the miniature before time runs out at Lengua Suelta hair salon. Random lesson quiz pop-ups interrupt the scissors — answer right to keep going.",
+  "icon": "💇",
+  "version": "1.0.0",
+  "author": "Arborito Official",
+  "descriptions": {
+    "en": "Match the client's requested cut from the miniature before time runs out at Lengua Suelta hair salon. Random lesson quiz pop-ups interrupt the scissors — answer right to keep going.",
+    "es": "Imitá el corte de la miniatura antes de que se acabe el tiempo en la peluquería Lengua Suelta. Preguntas al azar de la lección te interrumpen: respondé bien para seguir con la tijera."
+  }
+}

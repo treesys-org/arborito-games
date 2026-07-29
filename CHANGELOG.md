@@ -4,6 +4,12 @@ Browser cartridges only. The app loads this repo via jsDelivr; bump **`meta.json
 
 ## Catalog
 
+### Lengua Suelta `1.0.0`
+
+- New cartridge: match the ordered haircut at Lengua Suelta salon against a countdown while random lesson quiz pop-ups interrupt the scissors.
+- Five difficulty levels per shift; scissors and hair extensions; face stays clear of hair.
+- Correct answers add time; wrong answers cost time and regrow a little hair.
+
 ### Wrong Fruit `1.1.1`
 
 - Garden sessions build a wider quiz pool from following lessons and prioritize concrete questions over course-overview prompts.
@@ -37,6 +43,7 @@ All cartridges ship as **`1.0.0`**.
 | `classroom` | 1.0.0 |
 | `firstjob` | 1.0.0 |
 | `hacky-terminal` | 1.0.0 |
+| `lengua-suelta` | 1.0.0 |
 | `memory` | 1.0.0 |
 | `starship` | 1.0.1 |
 | `wrong-fruit` | 1.1.1 |
