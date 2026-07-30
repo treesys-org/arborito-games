@@ -1,7 +1,7 @@
 /**
  * Lengua Suelta — match the client's requested cut against the clock
  * at the Lengua Suelta hair salon. Random lesson quiz pop-ups interrupt
- * the scissors; answer to keep going. UI chrome is English; title stays Spanish.
+ * the scissors; answer to keep going. UI follows host language (EN/ES).
  */
 const bindTap =
   window.arborito?.platform?.onTap ||
@@ -19,45 +19,522 @@ const MATCH_TARGET = 78;
 const TITLE = 'Lengua Suelta';
 
 const STR = {
-  title: TITLE,
-  salonTag: 'Hair salon',
-  topicFallback: 'Salon shift',
-  startBody:
-    'Welcome to <strong>Lengua Suelta</strong>. Copy the haircut in the miniature before time runs out. Clients never stop talking — random lesson questions pop up mid-cut. Right answers buy time; wrong ones cost it. Use scissors or hair extensions.',
-  startBtn: 'Open the shop',
-  levelChip: 'Lv. {n}',
-  cutLabel: 'Match',
-  previewLabel: 'Order',
-  toolCut: '✂ Scissors',
-  toolGrow: '💇 Hair extensions',
-  quizBadge: 'Client asks!',
-  chatIdle: [
-    'So yeah, as I was saying…',
-    'Make it look like the photo, eh?',
-    "You know what's funny?",
-    'My cousin said the same thing.',
-    'Careful with the fringe!',
-  ],
-  chatQuiz: 'Wait wait — quick question!',
-  chatOk: 'Nice! You know your stuff.',
-  chatBad: "Nah, that's not it… keep cutting though.",
-  levelWinTitle: 'Client done!',
-  levelWinMsg: 'Match {cut}% · +{pts} pts · Time left {time}s',
-  nextClient: 'Next client',
-  nextLesson: 'Next lesson',
-  retry: 'Retry shift',
-  winTitle: 'Shift complete!',
-  loseTitle: "Time's up!",
-  loseMsg: 'The client left unhappy. Score {score} · Level {level}/{total}',
-  winMsg: 'Score {score} · All {total} clients happy.',
-  noBridge: "Couldn't connect to the course.",
-  noLesson: "Couldn't load a lesson.",
-  noQuiz: 'This lesson has no quiz — add @quiz blocks to play.',
-  timeBonus: '+{n}s',
-  timePenalty: '−{n}s',
+  EN: {
+    title: TITLE,
+    salonTag: 'Hair salon',
+    topicFallback: 'Salon shift',
+    clientFallback: 'Client',
+    startBody:
+      'Welcome to <strong>Lengua Suelta</strong>. Copy the haircut in the miniature before time runs out. Clients never stop talking — random lesson questions pop up mid-cut. Right answers buy time; wrong ones cost it. Use scissors or hair extensions.',
+    startBtn: 'Open the shop',
+    levelChip: 'Lv. {n}',
+    cutLabel: 'Match',
+    previewLabel: 'Order',
+    toolCut: '✂ Scissors',
+    toolGrow: '💇 Hair extensions',
+    finishCut: '✓ Hand in cut',
+    quizBadge: 'While you cut…',
+    chatStudy:
+      'I was just studying «{topic}» — mind if I chat about it while you cut?',
+    handInTitle: 'Cut handed in!',
+    handInMsg: 'Match {cut}% · +{pts} pts · Early hand-in',
+    chatIdle: [
+      'So yeah, as I was saying…',
+      'Make it look like the photo, eh?',
+      "You know what's funny?",
+      'My cousin said the same thing.',
+      'Careful with the fringe!',
+      'Don’t take too much off the top.',
+      'I have a date after this, no pressure.',
+      'Last time they cut it way too short.',
+      'Can you hurry a tiny bit? Parking meter.',
+      'My boss is going to notice this one.',
+      'Leave the ears free, please.',
+      'I saw this cut on a show last night.',
+      'If it looks weird I’ll just wear a hat.',
+      'Is the shop always this busy?',
+      'Tell me when to tilt my head.',
+      'I trust you… mostly.',
+      'Same as the miniature, nothing fancy.',
+      'My partner booked this appointment.',
+      'Oops — was that a quiz? Keep going!',
+      'Coffee after? Kidding, focus on the cut.',
+    ],
+    chatQuiz: [
+      'Oh wait — quick thing while you cut…',
+      'By the way, real quick…',
+      'Don’t stop cutting, just tell me…',
+      'Ah! That reminded me…',
+    ],
+    quizLeads: [
+      'Oh by the way — do you remember this?',
+      'Ah, quick one while you’re at it…',
+      'Don’t mind me chatting — what about this?',
+      'My cousin asked me this yesterday…',
+      'Totally random, but…',
+      'While you’ve got the scissors — help me out:',
+    ],
+    quizLeadsTopic: [
+      'Oh by the way — do you remember {x}?',
+      'Ah! Speaking of {x}…',
+      'Quick: what do you know about {x}?',
+      'My cousin was asking about {x}…',
+    ],
+    quizLeadsOrder: [
+      'Help me get this in the right order…',
+      'Wait — how does this go again?',
+      'Talk me through the order, real quick…',
+    ],
+    quizLeadsCloze: [
+      'Finish this thought for me…',
+      'There’s a blank in my head — fill it in?',
+      'How would you complete this?',
+    ],
+    chatOk: [
+      'Nice! You know your stuff.',
+      'Yes! That’s what I meant.',
+      'Ha — correct. Keep cutting.',
+      'Okay brainiac, back to the scissors.',
+      'See? I knew you’d get it.',
+    ],
+    chatBad: [
+      "Nah, that's not it… keep cutting though.",
+      'Wrong — but the hair still needs work.',
+      'Nope. Don’t freeze, keep going.',
+      'Missed it. Timer doesn’t care.',
+      'Hmm, not quite — scissors first though.',
+    ],
+    levelWinTitle: 'Client done!',
+    levelWinMsg: 'Match {cut}% · +{pts} pts · Time left {time}s',
+    nextClient: 'Next client',
+    nextLesson: 'Next lesson',
+    retry: 'Retry shift',
+    winTitle: 'Shift complete!',
+    loseTitle: "Time's up!",
+    loseMsg: 'The client left unhappy. Score {score} · Level {level}/{total}',
+    winMsg: 'Score {score} · All {total} clients happy.',
+    noBridge: "Couldn't connect to the course.",
+    noLesson: "Couldn't load a lesson.",
+    noQuiz: 'This lesson has no quiz — add @quiz blocks to play.',
+    timeBonus: '+{n}s',
+    timePenalty: '−{n}s',
+  },
+  ES: {
+    title: TITLE,
+    salonTag: 'Peluquería',
+    topicFallback: 'Turno en el salón',
+    clientFallback: 'Cliente',
+    startBody:
+      'Bienvenido/a a <strong>Lengua Suelta</strong>. Copia el corte de la miniatura antes de que se acabe el tiempo. Los clientes no paran de hablar: preguntas al azar de la lección aparecen a mitad del corte. Si aciertas, ganas tiempo; si fallas, lo pierdes. Usa la tijera o las extensiones.',
+    startBtn: 'Abrir el salón',
+    levelChip: 'Niv. {n}',
+    cutLabel: 'Parecido',
+    previewLabel: 'Pedido',
+    toolCut: '✂ Tijera',
+    toolGrow: '💇 Extensiones',
+    finishCut: '✓ Entregar corte',
+    quizBadge: 'Mientras cortas…',
+    chatStudy:
+      'Estaba estudiando «{topic}» — ¿te importa si te pregunto cosas mientras cortas?',
+    handInTitle: '¡Corte entregado!',
+    handInMsg: 'Parecido {cut}% · +{pts} pts · Entrega anticipada',
+    chatIdle: [
+      'Bueno, como te decía…',
+      'Que quede igualito a la foto, ¿eh?',
+      '¿Sabes qué es lo gracioso?',
+      'Mi primo dijo lo mismo.',
+      '¡Cuidado con el flequillo!',
+      'No me saques demasiado de arriba.',
+      'Tengo una cita después, sin presión.',
+      'La última vez me lo dejaron demasiado corto.',
+      '¿Puedes apurarte un poco? El parquímetro.',
+      'Mi jefe se va a dar cuenta de este corte.',
+      'Deja las orejas libres, por favor.',
+      'Vi este corte en una serie anoche.',
+      'Si queda raro me pongo un gorro y listo.',
+      '¿Siempre hay tanta gente en el salón?',
+      'Avísame cuándo inclinar la cabeza.',
+      'Confío en ti… más o menos.',
+      'Igual a la miniatura, nada raro.',
+      'Mi pareja me sacó la cita.',
+      'Uy — ¿era una pregunta? Sigue igual.',
+      '¿Café después? Es broma, mira el corte.',
+    ],
+    chatQuiz: [
+      'Espera un momento — una cosita mientras cortas…',
+      'Ah, por cierto, rapidito…',
+      'No pares la tijera, solo dime…',
+      '¡Ah! Eso me recordó algo…',
+    ],
+    quizLeads: [
+      'Ah, por cierto — ¿te acuerdas de esto?',
+      'Una duda rápida mientras estás…',
+      'Perdón que hable tanto, pero…',
+      'Mi primo me preguntó esto ayer…',
+      'Totalmente al azar, pero…',
+      'Ya que tienes la tijera — ayúdame:',
+    ],
+    quizLeadsTopic: [
+      'Ah, por cierto — ¿te acuerdas de {x}?',
+      '¡Ah! Hablando de {x}…',
+      'Rápido: ¿qué sabes de {x}?',
+      'Mi primo preguntaba por {x}…',
+    ],
+    quizLeadsOrder: [
+      'Ayúdame a poner esto en orden…',
+      'Espera — ¿cómo era el orden?',
+      'Explícame el orden, rapidito…',
+    ],
+    quizLeadsCloze: [
+      'Complétame esta frase…',
+      'Tengo un hueco en la cabeza — ¿lo llenas?',
+      '¿Cómo terminarías esto?',
+    ],
+    chatOk: [
+      '¡Bien! Sabes del tema.',
+      '¡Eso! Justo lo que pensaba.',
+      'Ja — correcta. Sigue con la tijera.',
+      'Ok, genio, de vuelta al corte.',
+      '¿Viste? Sabía que lo tenías.',
+    ],
+    chatBad: [
+      'No, no era eso… sigue cortando igual.',
+      'Incorrecto — pero el pelo sigue pidiendo tijera.',
+      'No. No te congeles, sigue.',
+      'Fallaste. El reloj no perdona.',
+      'Mmm, no del todo — primero la tijera.',
+    ],
+    levelWinTitle: '¡Cliente listo!',
+    levelWinMsg: 'Parecido {cut}% · +{pts} pts · Tiempo restante {time}s',
+    nextClient: 'Siguiente cliente',
+    nextLesson: 'Siguiente lección',
+    retry: 'Reintentar turno',
+    winTitle: '¡Turno completo!',
+    loseTitle: '¡Se acabó el tiempo!',
+    loseMsg: 'El cliente se fue molesto. Puntos {score} · Nivel {level}/{total}',
+    winMsg: 'Puntos {score} · Los {total} clientes felices.',
+    noBridge: 'No se pudo conectar con el curso.',
+    noLesson: 'No se pudo cargar una lección.',
+    noQuiz: 'Esta lección no tiene cuestionario: añade bloques @quiz para jugar.',
+    timeBonus: '+{n}s',
+    timePenalty: '−{n}s',
+  },
 };
 
-const CLIENT_NAMES = ['Sam', 'Alex', 'Jordan', 'Riley', 'Casey', 'Quinn', 'Morgan', 'Jamie'];
+/** Haircut names and client order lines, keyed by style id. */
+const STYLE_COPY = {
+  EN: {
+    mohawk: {
+      label: 'Mohawk',
+      phrases: [
+        'I want a proper punk mohawk!',
+        'Tall strip down the middle — sides gone.',
+        'Make it loud. Mohawk, please.',
+      ],
+    },
+    buzz: {
+      label: 'Buzz',
+      phrases: [
+        'Buzz me almost bald, military style.',
+        'Short all over. No fluff.',
+        'Keep it neat and tight — buzz cut.',
+      ],
+    },
+    bob: {
+      label: 'Bob',
+      phrases: [
+        'A classic bob, please.',
+        'Chin-length, even all around.',
+        'Bob cut — clean and simple.',
+      ],
+    },
+    bald: {
+      label: 'Bald',
+      phrases: [
+        'Shave me bald, no drama.',
+        'All of it off. Smooth.',
+        'Bald. Like, actually bald.',
+      ],
+    },
+    fringe: {
+      label: 'Fringe',
+      phrases: [
+        'Full crown, long on the sides.',
+        'Keep the sides hanging.',
+        'Volume on top, length at the ears.',
+      ],
+    },
+    mullet: {
+      label: 'Mullet',
+      phrases: [
+        'Mullet: short front, long back.',
+        'Business in front, party in the back.',
+        'Yes, a real mullet. Commit.',
+      ],
+    },
+    bowl: {
+      label: 'Bowl',
+      phrases: [
+        'A neat bowl cut.',
+        'Round and tidy — bowl style.',
+        'Like a bowl sat on my head. Perfect.',
+      ],
+    },
+    bangsOnly: {
+      label: 'Short',
+      phrases: [
+        'Short on the crown, face clear.',
+        'Just a little on top.',
+        'Short crown — nothing over the eyes.',
+      ],
+    },
+    ponytail: {
+      label: 'Ponytail',
+      phrases: [
+        'Pull it back into a ponytail.',
+        'Crown neat, one long tail behind.',
+        'Ponytail energy. Let’s go.',
+      ],
+    },
+    spikes: {
+      label: 'Spikes',
+      phrases: [
+        'Spiky on top — like a hedgehog.',
+        'Pointy tips, please.',
+        'I want spikes. Several of them.',
+      ],
+    },
+    afro: {
+      label: 'Afro',
+      phrases: [
+        'Big round afro — full volume.',
+        'Fluffy sphere. Don’t flatten it.',
+        'Give me that round cloud.',
+      ],
+    },
+    undercut: {
+      label: 'Undercut',
+      phrases: [
+        'Flat top, sides shaved clean.',
+        'Undercut: top stays, sides go.',
+        'Hard part vibes — undercut.',
+      ],
+    },
+    sidePart: {
+      label: 'Side part',
+      phrases: [
+        'Sweep it all to one side.',
+        'Heavy side part, please.',
+        'Most of the hair on the left.',
+      ],
+    },
+    longLocks: {
+      label: 'Long',
+      phrases: [
+        'Leave it long — almost to the shoulders.',
+        'I want length. Lots of it.',
+        'Long locks, face still free.',
+      ],
+    },
+    topKnot: {
+      label: 'Top knot',
+      phrases: [
+        'Bun on top — top knot.',
+        'Little knot up high.',
+        'Tie it up. Top knot only.',
+      ],
+    },
+    curtain: {
+      label: 'Curtain',
+      phrases: [
+        'Middle part, curtains on both sides.',
+        'Open the face — curtain bangs.',
+        'Split in the middle, soft sides.',
+      ],
+    },
+    crew: {
+      label: 'Crew',
+      phrases: [
+        'Flat crew cut — short and square.',
+        'Crew: neat box on top.',
+        'Short flat top, nothing wild.',
+      ],
+    },
+    horns: {
+      label: 'Horns',
+      phrases: [
+        'Two little horns on the sides. Fun.',
+        'Devil-horn tufts — go for it.',
+        'I know it’s weird. Horns.',
+      ],
+    },
+  },
+  ES: {
+    mohawk: {
+      label: 'Mohicano',
+      phrases: [
+        '¡Quiero un mohicano bien punk!',
+        'Una franja alta al medio — lados a cero.',
+        'Que se note. Mohicano, por favor.',
+      ],
+    },
+    buzz: {
+      label: 'Rapeado',
+      phrases: [
+        'Rápame casi calvo, estilo militar.',
+        'Corto por todos lados. Sin volumen.',
+        'Ordenado y al ras — rapeado.',
+      ],
+    },
+    bob: {
+      label: 'Bob',
+      phrases: [
+        'Un bob clásico, por favor.',
+        'Hasta la mandíbula, parejo.',
+        'Bob limpio y simple.',
+      ],
+    },
+    bald: {
+      label: 'Calvo',
+      phrases: [
+        'Aféitame al ras, sin drama.',
+        'Todo fuera. Suave.',
+        'Calvo. En serio, calvo.',
+      ],
+    },
+    fringe: {
+      label: 'Flequillo',
+      phrases: [
+        'Corona llena, largo a los lados.',
+        'Deja los lados colgando.',
+        'Volumen arriba, largo en las orejas.',
+      ],
+    },
+    mullet: {
+      label: 'Mullet',
+      phrases: [
+        'Mullet: corto adelante, largo atrás.',
+        'Negocios adelante, fiesta atrás.',
+        'Sí, un mullet de verdad. Comprométete.',
+      ],
+    },
+    bowl: {
+      label: 'Tazón',
+      phrases: [
+        'Un corte de tazón ordenado.',
+        'Redondo y cuidado — estilo tazón.',
+        'Como si me hubieran puesto un bowl. Perfecto.',
+      ],
+    },
+    bangsOnly: {
+      label: 'Corto',
+      phrases: [
+        'Corto en la coronilla, cara libre.',
+        'Solo un poquito arriba.',
+        'Coronilla corta — nada sobre los ojos.',
+      ],
+    },
+    ponytail: {
+      label: 'Cola',
+      phrases: [
+        'Átame el pelo en una cola atrás.',
+        'Corona ordenada y una cola larga.',
+        'Estilo cola de caballo. Vamos.',
+      ],
+    },
+    spikes: {
+      label: 'Picos',
+      phrases: [
+        'Con picos arriba — tipo erizo.',
+        'Puntitas, por favor.',
+        'Quiero picos. Varios.',
+      ],
+    },
+    afro: {
+      label: 'Afro',
+      phrases: [
+        'Afro grande — máximo volumen.',
+        'Esfera esponjosa. No lo aplastes.',
+        'Dame esa nube redonda.',
+      ],
+    },
+    undercut: {
+      label: 'Undercut',
+      phrases: [
+        'Arriba plano, lados afeitados.',
+        'Undercut: arriba queda, lados fuera.',
+        'Estilo undercut bien marcado.',
+      ],
+    },
+    sidePart: {
+      label: 'Raya al lado',
+      phrases: [
+        'Todo peinado hacia un lado.',
+        'Raya profunda al lado, por favor.',
+        'La mayor parte del pelo a la izquierda.',
+      ],
+    },
+    longLocks: {
+      label: 'Largo',
+      phrases: [
+        'Déjalo largo — casi hasta los hombros.',
+        'Quiero largo. Bastante.',
+        'Melena larga, cara libre igual.',
+      ],
+    },
+    topKnot: {
+      label: 'Moño',
+      phrases: [
+        'Un moño arriba — top knot.',
+        'Nudo pequeño bien alto.',
+        'Átame el pelo arriba. Solo el moño.',
+      ],
+    },
+    curtain: {
+      label: 'Cortina',
+      phrases: [
+        'Raya al medio, cortinas a los lados.',
+        'Abre la cara — flequillo cortina.',
+        'Partido al medio, lados suaves.',
+      ],
+    },
+    crew: {
+      label: 'Crew',
+      phrases: [
+        'Crew plano — corto y cuadrado.',
+        'Crew: cajita ordenada arriba.',
+        'Corte crew corto, nada exagerado.',
+      ],
+    },
+    horns: {
+      label: 'Cuernitos',
+      phrases: [
+        'Dos cuernitos a los lados. Por diversión.',
+        'Mechones tipo diablo — adelante.',
+        'Sé que es raro. Cuernos.',
+      ],
+    },
+  },
+};
+
+const CLIENT_NAMES = [
+  'Sam',
+  'Alex',
+  'Jordan',
+  'Riley',
+  'Casey',
+  'Quinn',
+  'Morgan',
+  'Jamie',
+  'Taylor',
+  'Avery',
+  'Reese',
+  'Cameron',
+  'Drew',
+  'Skyler',
+  'Parker',
+  'Kai',
+];
 
 const HAIR_COLORS = ['#2a1810', '#3b2416', '#5c3317', '#1a1a1a', '#6b4423', '#c4a35a'];
 const SKIN_TONES = ['#e8b896', '#d4a574', '#c68642', '#f1c27d', '#8d5524'];
@@ -72,18 +549,110 @@ const LEVELS = [
 ];
 
 function resolveLang() {
-  // Lesson quiz cards follow the host language; game chrome stays English.
   const raw = String(window.arborito?.user?.lang || window.arborito?.lang || 'EN').toUpperCase();
   return raw.startsWith('ES') ? 'ES' : 'EN';
 }
 
 function t(key, vars = {}) {
-  let line = STR[key] ?? key;
-  if (typeof line !== 'string') return line;
+  const lang = resolveLang();
+  let line = STR[lang]?.[key] ?? STR.EN[key] ?? key;
+  if (typeof line !== 'string') return key;
   Object.entries(vars).forEach(([k, v]) => {
     line = line.replaceAll(`{${k}}`, String(v));
   });
   return line;
+}
+
+function styleCopy(key) {
+  const lang = resolveLang();
+  const row = STYLE_COPY[lang]?.[key] || STYLE_COPY.EN[key] || { label: key, phrases: [''] };
+  const phrases = row.phrases || (row.phrase ? [row.phrase] : ['']);
+  return {
+    label: row.label || key,
+    phrase: phrases[Math.floor(Math.random() * phrases.length)] || '',
+  };
+}
+
+function idleLines() {
+  const lang = resolveLang();
+  return STR[lang]?.chatIdle || STR.EN.chatIdle;
+}
+
+function pickStr(key) {
+  const lang = resolveLang();
+  const val = STR[lang]?.[key] ?? STR.EN[key];
+  if (Array.isArray(val)) return val[Math.floor(Math.random() * val.length)] || '';
+  if (typeof val === 'string') return val;
+  return key;
+}
+
+/** Soft client chatter wrapping a lesson question so it feels mid-appointment. */
+function frameClientQuestion(card) {
+  const lang = resolveLang();
+  const table = STR[lang] || STR.EN;
+  const body = String(card?.question || '').trim();
+  const concept = String(card?.concept || '').trim();
+  const mode = card?.mode || 'multiple';
+  const bodyLower = body.toLowerCase();
+
+  let pool;
+  if (mode === 'chips' || mode === 'steps') {
+    pool = table.quizLeadsOrder || table.quizLeads;
+  } else if (mode === 'cloze') {
+    pool = table.quizLeadsCloze || table.quizLeads;
+  } else if (
+    concept &&
+    concept.length >= 2 &&
+    concept.length <= 48 &&
+    !bodyLower.includes(concept.toLowerCase()) &&
+    (table.quizLeadsTopic || []).length
+  ) {
+    pool = table.quizLeadsTopic;
+  } else {
+    pool = table.quizLeads;
+  }
+
+  let lead = pickFrom(pool);
+  if (lead.includes('{x}')) {
+    if (concept) lead = lead.replaceAll('{x}', concept);
+    else lead = pickFrom(table.quizLeads);
+  }
+
+  /* If the authored question already sounds chatty, keep the lead short. */
+  const alreadyChatty =
+    /^(ah|oh|hey|wait|espera|por cierto|una duda|ayúdame|ayudame|help me|by the way)\b/i.test(body);
+  if (alreadyChatty) {
+    return { lead: '', body, display: body, chat: lead || pickStr('chatQuiz') };
+  }
+  return {
+    lead,
+    body,
+    display: lead ? `${lead}\n\n${body}` : body,
+    chat: lead || pickStr('chatQuiz'),
+  };
+}
+
+/** Same idea as Classroom: name what you're studying from quiz topics. */
+function studyTopicLabel(quizzes, lesson) {
+  const topics = [];
+  const seen = new Set();
+  for (const q of quizzes || []) {
+    const topic = String(q?.concept || '').trim();
+    if (!topic) continue;
+    const key = topic.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    topics.push(topic);
+    if (topics.length >= 3) break;
+  }
+  if (topics.length) return topics.join(', ');
+  const lessonTitle = String(lesson?.title || '').trim();
+  return lessonTitle || t('topicFallback');
+}
+
+function pickFrom(arr) {
+  if (!Array.isArray(arr) || !arr.length) return '';
+  return arr[Math.floor(Math.random() * arr.length)] || '';
 }
 
 function shuffle(arr) {
@@ -173,8 +742,6 @@ function similarity(a, b) {
 
 const STYLES = {
   mohawk: {
-    label: 'Mohawk',
-    phrase: 'I want a proper punk mohawk!',
     build(g) {
       fillAll(g, 0);
       for (let y = 2; y < 28; y++) for (let x = 24; x < 32; x++) g[y][x] = 1;
@@ -184,8 +751,6 @@ const STYLES = {
     },
   },
   buzz: {
-    label: 'Buzz',
-    phrase: 'Buzz me almost bald, military style.',
     build(g) {
       fillAll(g, 0);
       for (let y = 14; y < 34; y++)
@@ -195,8 +760,6 @@ const STYLES = {
     },
   },
   bob: {
-    label: 'Bob',
-    phrase: 'A classic bob, please.',
     build(g) {
       fillAll(g, 0);
       for (let y = 6; y < 48; y++)
@@ -209,15 +772,11 @@ const STYLES = {
     },
   },
   bald: {
-    label: 'Bald',
-    phrase: 'Shave me bald, no drama.',
     build(g) {
       fillAll(g, 0);
     },
   },
   fringe: {
-    label: 'Fringe',
-    phrase: 'Full crown, long on the sides.',
     build(g) {
       fillAll(g, 0);
       for (let y = 4; y < 42; y++)
@@ -230,8 +789,6 @@ const STYLES = {
     },
   },
   mullet: {
-    label: 'Mullet',
-    phrase: 'Mullet: short front, long back.',
     build(g) {
       fillAll(g, 0);
       for (let y = 8; y < 30; y++)
@@ -247,8 +804,6 @@ const STYLES = {
     },
   },
   bowl: {
-    label: 'Bowl',
-    phrase: 'A neat bowl cut.',
     build(g) {
       fillAll(g, 0);
       for (let y = 4; y < 34; y++)
@@ -259,8 +814,6 @@ const STYLES = {
     },
   },
   bangsOnly: {
-    label: 'Short',
-    phrase: 'Short on the crown, face clear.',
     build(g) {
       fillAll(g, 0);
       for (let y = 8; y < 28; y++)
@@ -269,17 +822,208 @@ const STYLES = {
       clearFaceWindow(g);
     },
   },
+  ponytail: {
+    build(g) {
+      fillAll(g, 0);
+      for (let y = 6; y < 30; y++)
+        for (let x = 14; x < 42; x++)
+          if (Math.hypot(x - 28, y - 18) < 13) g[y][x] = 1;
+      for (let y = 28; y < 58; y++)
+        for (let x = 25; x < 31; x++) {
+          if (Math.abs(x - 28) < 2.6 + (y - 28) * 0.02) g[y][x] = 1;
+        }
+      clearFaceWindow(g);
+    },
+  },
+  spikes: {
+    build(g) {
+      fillAll(g, 0);
+      for (let y = 16; y < 32; y++)
+        for (let x = 14; x < 42; x++)
+          if (inScalp(x, y) && Math.hypot(x - 28, y - 22) < 12) g[y][x] = 1;
+      const tips = [18, 23, 28, 33, 38];
+      for (const cx of tips) {
+        for (let y = 2; y < 18; y++) {
+          const w = 1 + (y < 8 ? 0 : 1);
+          for (let x = cx - w; x <= cx + w; x++) g[y][x] = 1;
+        }
+      }
+      clearFaceWindow(g);
+    },
+  },
+  afro: {
+    build(g) {
+      fillAll(g, 0);
+      for (let y = 2; y < 40; y++)
+        for (let x = 6; x < 50; x++) {
+          if (Math.hypot((x - 28) / 18, (y - 20) / 16) < 1) g[y][x] = 1;
+        }
+      clearFaceWindow(g);
+    },
+  },
+  undercut: {
+    build(g) {
+      fillAll(g, 0);
+      for (let y = 8; y < 24; y++)
+        for (let x = 14; x < 42; x++) {
+          if (Math.abs(x - 28) < 14 && y < 24) g[y][x] = 1;
+        }
+      for (let y = 20; y < 28; y++)
+        for (let x = 16; x < 40; x++) if (inScalp(x, y) && !inFaceZone(x, y)) g[y][x] = 1;
+      clearFaceWindow(g);
+    },
+  },
+  sidePart: {
+    build(g) {
+      fillAll(g, 0);
+      for (let y = 4; y < 44; y++)
+        for (let x = 8; x < 36; x++) {
+          const top = Math.hypot((x - 22) / 14, (y - 18) / 14) < 1;
+          const fall = y > 24 && y < 46 && x < 30 && x > 10;
+          if (top || fall) g[y][x] = 1;
+        }
+      clearFaceWindow(g);
+    },
+  },
+  longLocks: {
+    build(g) {
+      fillAll(g, 0);
+      for (let y = 4; y < 60; y++)
+        for (let x = 8; x < 48; x++) {
+          const top = Math.hypot((x - 28) / 17, (y - 18) / 14) < 1;
+          const long = y >= 26 && Math.abs(x - 28) < 17 - (y - 26) * 0.05;
+          const side = y >= 28 && y < 52 && (x <= 14 || x >= 42) && Math.abs(x - 28) < 20;
+          if (top || long || side) g[y][x] = 1;
+        }
+      clearFaceWindow(g);
+    },
+  },
+  topKnot: {
+    build(g) {
+      fillAll(g, 0);
+      for (let y = 14; y < 30; y++)
+        for (let x = 16; x < 40; x++)
+          if (inScalp(x, y) && Math.hypot(x - 28, y - 22) < 11) g[y][x] = 1;
+      for (let y = 2; y < 16; y++)
+        for (let x = 22; x < 34; x++) {
+          if (Math.hypot(x - 28, y - 9) < 6.5) g[y][x] = 1;
+        }
+      clearFaceWindow(g);
+    },
+  },
+  curtain: {
+    build(g) {
+      fillAll(g, 0);
+      for (let y = 6; y < 46; y++)
+        for (let x = 8; x < 48; x++) {
+          if (Math.abs(x - 28) < 3 && y < 28) continue;
+          const left = Math.hypot((x - 18) / 10, (y - 22) / 16) < 1;
+          const right = Math.hypot((x - 38) / 10, (y - 22) / 16) < 1;
+          const crown = y < 20 && Math.hypot(x - 28, y - 14) < 12 && Math.abs(x - 28) > 2;
+          if (left || right || crown) g[y][x] = 1;
+        }
+      clearFaceWindow(g);
+    },
+  },
+  crew: {
+    build(g) {
+      fillAll(g, 0);
+      for (let y = 10; y < 24; y++)
+        for (let x = 16; x < 40; x++) {
+          if (Math.abs(x - 28) < 11) g[y][x] = 1;
+        }
+      for (let y = 20; y < 30; y++)
+        for (let x = 16; x < 40; x++) if (inScalp(x, y) && !inFaceZone(x, y)) g[y][x] = 1;
+      clearFaceWindow(g);
+    },
+  },
+  horns: {
+    build(g) {
+      fillAll(g, 0);
+      for (let y = 14; y < 32; y++)
+        for (let x = 14; x < 42; x++)
+          if (inScalp(x, y) && Math.hypot(x - 28, y - 22) < 12) g[y][x] = 1;
+      for (let y = 2; y < 16; y++) {
+        for (let x = 12; x < 20; x++) {
+          if (Math.hypot(x - 16, y - 8) < 4.5 - (16 - y) * 0.05) g[y][x] = 1;
+        }
+        for (let x = 36; x < 44; x++) {
+          if (Math.hypot(x - 40, y - 8) < 4.5 - (16 - y) * 0.05) g[y][x] = 1;
+        }
+      }
+      clearFaceWindow(g);
+    },
+  },
 };
 
 const STYLE_KEYS = Object.keys(STYLES);
 
 function quizKey(q) {
-  return `${String(q?.question || '').trim()}|${String(q?.correct || '').trim()}`.toLowerCase();
+  return `${q?.mode || 'multiple'}|${String(q?.question || '').trim()}|${String(q?.correct || '').trim()}`.toLowerCase();
 }
 
 function isOverviewQuestion(q) {
   const s = String(q?.question || '').toLowerCase();
   return /de qu[eé] trata|qu[eé] cubre|what is .+ about\b|what does .+ cover|what covers\b/.test(s);
+}
+
+function modesApi() {
+  return window.arborito?.challenge?.modes || null;
+}
+
+function isOrderingCard(card) {
+  const api = modesApi();
+  if (api?.isOrdering) return !!api.isOrdering(card);
+  return card?.mode === 'chips' || card?.mode === 'steps';
+}
+
+function distractorPoolFrom(challenges, modes) {
+  return challenges
+    .map((ch) => {
+      const play = modes?.challengeForPlay?.(ch) || ch;
+      return String(play?.correct_answer || play?.short_definition || '').trim();
+    })
+    .filter(Boolean);
+}
+
+function cardToQuiz(card, challenge, lessonId) {
+  if (!card?.correct && !card?.sequence?.length) return null;
+  const ordering = isOrderingCard(card);
+  if (ordering) {
+    if (!Array.isArray(card.sequence) || card.sequence.length < 2) return null;
+    return {
+      mode: card.mode,
+      concept: card.concept,
+      question: card.question,
+      correct: card.correct,
+      sequence: [...card.sequence],
+      chips: [...(card.chips || card.sequence)],
+      clozeDisplay: card.clozeDisplay,
+      challenge,
+      lessonId,
+    };
+  }
+  const junk = new Set([': ', '\u2014', '-', '…', '...', 'N/A', 'Unknown']);
+  const correct = String(card.correct || '').trim();
+  if (!correct) return null;
+  const cleanOpts = (card.options || [])
+    .map(String)
+    .map((s) => s.trim())
+    .filter((s) => s && !junk.has(s));
+  const options =
+    cleanOpts.length >= 2
+      ? [...new Set(cleanOpts)]
+      : null;
+  return {
+    mode: card.mode || 'multiple',
+    concept: card.concept,
+    question: card.question,
+    correct,
+    options,
+    clozeDisplay: card.clozeDisplay,
+    challenge,
+    lessonId,
+  };
 }
 
 function buildQuizzes(lesson) {
@@ -290,55 +1034,37 @@ function buildQuizzes(lesson) {
   const lang = resolveLang();
   const pool = [];
   const allWrong = [];
-  const junk = new Set([': ', '\u2014', '-', '…', '...', 'N/A', 'Unknown']);
+  const distractors = distractorPoolFrom(challenges, modes);
 
   for (const c of challenges) {
     const playable = modes?.playable?.(c) || [];
-    const mode = playable.includes('multiple') ? 'multiple' : playable[0];
-    if (!mode) continue;
-    const card = modes.buildCard(c, mode, {
-      lessonTitle: lesson.title,
-      lang,
-      distractorPool: challenges
-        .map((ch) => {
-          const play = modes?.challengeForPlay?.(ch) || ch;
-          return String(play?.correct_answer || play?.short_definition || '').trim();
-        })
-        .filter(Boolean),
-    });
-    if (!card?.correct) continue;
-    const correct = String(card.correct).trim();
-    const cleanOpts = (card.options || [])
-      .map(String)
-      .map((s) => s.trim())
-      .filter((s) => s && !junk.has(s));
-    if (cleanOpts.length >= 2) {
-      pool.push({
-        question: card.question || lesson.title,
-        correct,
-        options: [...new Set(cleanOpts)],
-        challenge: c,
-        lessonId: lesson.id,
+    if (!playable.length) continue;
+    for (const mode of playable) {
+      const card = modes.buildCard(c, mode, {
+        lessonTitle: lesson.title,
+        lang,
+        distractorPool: distractors,
       });
-      cleanOpts.forEach((o) => {
-        if (o !== correct) allWrong.push(o);
-      });
-    } else {
-      pool.push({
-        question: card.question,
-        correct,
-        options: null,
-        challenge: c,
-        lessonId: lesson.id,
-      });
+      if (!card) continue;
+      const q = cardToQuiz(card, c, lesson.id);
+      if (!q) continue;
+      pool.push(q);
+      if (q.options) {
+        q.options.forEach((o) => {
+          if (o !== q.correct) allWrong.push(o);
+        });
+      }
     }
   }
 
   const built = pool.map((q) => {
+    if (isOrderingCard(q)) {
+      return { ...q, chips: shuffle([...(q.chips || q.sequence)]) };
+    }
     if (q.options?.length >= 2) return { ...q, options: shuffle(q.options) };
-    const distractors = shuffle([...new Set(allWrong.filter((w) => w !== q.correct))]).slice(0, 3);
-    while (distractors.length < 3) distractors.push(`?${distractors.length + 1}`);
-    return { ...q, options: shuffle([q.correct, ...distractors.slice(0, 3)]) };
+    const distractors2 = shuffle([...new Set(allWrong.filter((w) => w !== q.correct))]).slice(0, 3);
+    while (distractors2.length < 3) distractors2.push(`?${distractors2.length + 1}`);
+    return { ...q, options: shuffle([q.correct, ...distractors2.slice(0, 3)]) };
   });
 
   const meat = built.filter((q) => !isOverviewQuestion(q));
@@ -349,30 +1075,51 @@ function buildQuizzes(lesson) {
 function mockQuizzes() {
   return [
     {
+      mode: 'multiple',
       question: 'Capital of France?',
       correct: 'Paris',
       options: shuffle(['Paris', 'Lyon', 'Marseille', 'Nice']),
       lessonId: 'mock',
     },
     {
+      mode: 'multiple',
       question: '2 + 2 = ?',
       correct: '4',
       options: shuffle(['3', '4', '5', '22']),
       lessonId: 'mock',
     },
     {
+      mode: 'chips',
+      question: 'Order the greeting',
+      correct: 'good morning',
+      sequence: ['good', 'morning'],
+      chips: shuffle(['good', 'morning']),
+      lessonId: 'mock',
+    },
+    {
+      mode: 'steps',
+      question: 'Order the steps',
+      correct: 'Wash → Cut → Style',
+      sequence: ['Wash', 'Cut', 'Style'],
+      chips: shuffle(['Wash', 'Cut', 'Style']),
+      lessonId: 'mock',
+    },
+    {
+      mode: 'multiple',
       question: 'Daytime sky color',
       correct: 'Blue',
       options: shuffle(['Blue', 'Green', 'Red', 'Black']),
       lessonId: 'mock',
     },
     {
+      mode: 'multiple',
       question: 'Opposite of cold',
       correct: 'Hot',
       options: shuffle(['Hot', 'Ice', 'Snow', 'Wind']),
       lessonId: 'mock',
     },
     {
+      mode: 'multiple',
       question: 'Days in a week?',
       correct: '7',
       options: shuffle(['5', '6', '7', '8']),
@@ -587,6 +1334,7 @@ class Game {
       previewLabel: document.getElementById('previewLabel'),
       toolCut: document.getElementById('toolCut'),
       toolGrow: document.getElementById('toolGrow'),
+      btnFinish: document.getElementById('btnFinish'),
     };
     this.ctx = this.els.canvas.getContext('2d');
     this.pctx = this.els.preview.getContext('2d');
@@ -605,6 +1353,7 @@ class Game {
     this.timeMax = 1;
     this.playing = false;
     this.quizOpen = false;
+    this.quizLocked = false;
     this.drawing = false;
     this.nextQuizAt = 0;
     this.skinTone = 0;
@@ -621,6 +1370,8 @@ class Game {
   }
 
   localizeChrome() {
+    document.documentElement.lang = resolveLang() === 'ES' ? 'es' : 'en';
+    document.title = TITLE;
     this.els.brandTitle.textContent = TITLE;
     this.els.startTitle.textContent = TITLE;
     this.els.startDesc.innerHTML = t('startBody');
@@ -633,6 +1384,8 @@ class Game {
     this.els.btnRetry.textContent = t('retry');
     this.els.toolCut.textContent = t('toolCut');
     this.els.toolGrow.textContent = t('toolGrow');
+    if (this.els.btnFinish) this.els.btnFinish.textContent = t('finishCut');
+    this.els.clientName.textContent = t('clientFallback');
     const tag = document.getElementById('salonTag');
     if (tag) tag.textContent = t('salonTag');
   }
@@ -645,11 +1398,12 @@ class Game {
     });
     bindTap(this.els.btnNextLesson, () => this.beginSession({ advance: true }));
     bindTap(this.els.btnRetry, () => this.beginSession({ advance: false }));
+    if (this.els.btnFinish) bindTap(this.els.btnFinish, () => this.handInCut());
 
-    document.querySelectorAll('.tool').forEach((btn) => {
+    document.querySelectorAll('.tool[data-tool]').forEach((btn) => {
       bindTap(btn, () => {
         this.tool = btn.dataset.tool;
-        document.querySelectorAll('.tool').forEach((b) => b.classList.toggle('active', b === btn));
+        document.querySelectorAll('.tool[data-tool]').forEach((b) => b.classList.toggle('active', b === btn));
       });
     });
 
@@ -772,14 +1526,17 @@ class Game {
     this.quizOpen = false;
     this.els.quizOverlay.classList.add('hidden');
     this.scheduleNextQuiz();
-    this.chatTimer = 2;
-
-    const style = STYLES[this.styleKey];
-    this.setChat(style.phrase);
+    const studyTopic = studyTopicLabel(this.quizzes, this.lesson);
+    const copy = styleCopy(this.styleKey);
+    this.pendingOrderPhrase = copy.phrase;
+    this.chatPhase = 'study';
+    this.chatTimer = 7.2;
+    this.setChat(t('chatStudy', { topic: studyTopic }));
 
     this.els.levelChip.textContent = t('levelChip', { n: this.level });
     this.els.scoreChip.textContent = `★ ${this.score}`;
-    this.els.clientName.textContent = `${this.clientName} · ${style.label}`;
+    this.els.clientName.textContent = `${this.clientName} · ${copy.label}`;
+    if (this.els.btnFinish) this.els.btnFinish.disabled = false;
     this.drawPreview();
     this.updateHud();
     this.lastTs = performance.now();
@@ -789,12 +1546,23 @@ class Game {
   }
 
   pickIdle() {
-    const lines = STR.chatIdle;
+    const lines = idleLines();
     return lines[Math.floor(Math.random() * lines.length)];
   }
 
   setChat(text) {
-    this.els.chatText.textContent = text;
+    const el = this.els.chatText;
+    if (!el) return;
+    const next = String(text || '');
+    if (el.textContent === next && !el.classList.contains('chat-out')) return;
+    clearTimeout(this._chatAnim);
+    el.classList.remove('chat-in');
+    el.classList.add('chat-out');
+    this._chatAnim = setTimeout(() => {
+      el.textContent = next;
+      el.classList.remove('chat-out');
+      el.classList.add('chat-in');
+    }, 160);
   }
 
   scheduleNextQuiz() {
@@ -832,8 +1600,15 @@ class Game {
       this.timeLeft -= dt;
       this.chatTimer -= dt;
       if (this.chatTimer <= 0) {
-        this.setChat(this.pickIdle());
-        this.chatTimer = 3.5 + Math.random() * 3;
+        if (this.chatPhase === 'study') {
+          this.setChat(this.pendingOrderPhrase || styleCopy(this.styleKey).phrase);
+          this.chatPhase = 'order';
+          this.chatTimer = 6.8;
+        } else {
+          this.setChat(this.pickIdle());
+          this.chatPhase = 'idle';
+          this.chatTimer = 6.8 + Math.random() * 2.4;
+        }
       }
       if (this.timeLeft <= this.nextQuizAt && this.quizzes.length) {
         this.openQuiz();
@@ -869,8 +1644,8 @@ class Game {
   openQuiz() {
     if (!this.quizzes.length) return;
     this.quizOpen = true;
+    this.quizLocked = false;
     this.drawing = false;
-    this.setChat(t('chatQuiz'));
 
     let q = this.quizzes[this.quizIdx % this.quizzes.length];
     let tries = 0;
@@ -880,35 +1655,165 @@ class Game {
       tries++;
     }
     this.currentQuiz = q;
-    this.els.quizQ.textContent = q.question;
-    this.els.quizOpts.innerHTML = '';
-    const opts = shuffle([...(q.options || [q.correct])]).slice(0, 4);
-    if (!opts.includes(q.correct)) opts[0] = q.correct;
 
-    for (const opt of shuffle(opts)) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'qopt';
-      btn.textContent = opt;
-      bindTap(btn, () => this.answerQuiz(opt, btn));
-      this.els.quizOpts.appendChild(btn);
+    const frame = frameClientQuestion(q);
+    this.setChat(frame.chat);
+
+    const modes = modesApi();
+    const lang = resolveLang();
+    const ordering = isOrderingCard(q);
+    this.els.quizBadge.textContent = t('quizBadge');
+
+    /* Choice: lead + question up top. Ordering: lead up top, prompt in seq-hint. */
+    this.els.quizQ.hidden = false;
+    if (ordering) {
+      this.els.quizQ.textContent = frame.lead || pickStr('chatQuiz');
+    } else {
+      this.els.quizQ.textContent = frame.display;
     }
+
+    this.els.quizOpts.innerHTML = '';
+    this.els.quizOpts.classList.toggle('is-ordering', ordering);
+
+    if (modes?.renderAnswers) {
+      /* SDK injects the raw question into seq-hint; keep body only for ordering. */
+      const renderCard = ordering ? { ...q, question: frame.body || q.question } : { ...q, question: '' };
+      this.els.quizOpts.innerHTML = modes.renderAnswers(
+        ordering ? renderCard : q,
+        { showOpts: true, lang }
+      );
+      if (ordering) {
+        const hint = this.els.quizOpts.querySelector('.seq-hint');
+        if (hint) hint.textContent = frame.body || q.question || '';
+      }
+      this.bindQuizInteraction(q);
+    } else if (ordering) {
+      this.renderOrderingFallback({ ...q, question: frame.body || q.question });
+    } else {
+      this.renderChoiceFallback(q);
+    }
+
     this.els.quizOverlay.classList.remove('hidden');
     this.draw();
   }
 
-  answerQuiz(opt, btn) {
-    if (!this.quizOpen || !this.currentQuiz) return;
+  renderChoiceFallback(q) {
+    const opts = shuffle([...(q.options || [q.correct])]).slice(0, 4);
+    if (!opts.includes(q.correct)) opts[0] = q.correct;
+    for (const opt of shuffle(opts)) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'opt-btn';
+      btn.dataset.value = opt;
+      btn.textContent = opt;
+      bindTap(btn, () => this.onChoicePick(opt, btn));
+      this.els.quizOpts.appendChild(btn);
+    }
+  }
+
+  renderOrderingFallback(q) {
+    const lang = resolveLang();
+    const words = shuffle([...(q.chips || q.sequence || [])]);
+    const targetPh = lang === 'ES' ? 'Toca las palabras en orden…' : 'Tap words below in order…';
+    const confirmLabel = lang === 'ES' ? 'Confirmar' : 'Confirm';
+    this.els.quizOpts.innerHTML = `
+      <div class="seq-wrap" data-mode="${q.mode || 'chips'}">
+        <p class="seq-hint"></p>
+        <div class="seq-target" data-seq-target><span class="seq-target-ph">${targetPh}</span></div>
+        <div class="seq-pool" data-seq-pool>
+          ${words
+            .map(
+              (chip, i) =>
+                `<button type="button" class="seq-chip" data-chip="${String(chip).replace(/"/g, '&quot;')}" data-chip-idx="${i}">${chip}</button>`
+            )
+            .join('')}
+        </div>
+        <button type="button" class="seq-submit">${confirmLabel}</button>
+      </div>`;
+    const hint = this.els.quizOpts.querySelector('.seq-hint');
+    if (hint) hint.textContent = q.question || '';
+    this.bindQuizInteraction(q);
+  }
+
+  bindQuizInteraction(card) {
+    const root = this.els.quizOpts;
+    if (isOrderingCard(card)) {
+      const pool = root.querySelector('[data-seq-pool]');
+      const target = root.querySelector('[data-seq-target]');
+      const submitBtn = root.querySelector('.seq-submit');
+      const expectedLen = Array.isArray(card.sequence) ? card.sequence.length : 0;
+
+      const refreshPh = () => {
+        const ph = target?.querySelector('.seq-target-ph');
+        if (!ph || !target) return;
+        ph.style.display = target.querySelector('.seq-chip') ? 'none' : '';
+      };
+
+      const submitNow = () => {
+        if (this.quizLocked) return;
+        const picked = [...(target?.querySelectorAll('.seq-chip') || [])].map(
+          (c) => c.dataset.chip || ''
+        );
+        const api = modesApi();
+        const ok = api?.checkOrder
+          ? api.checkOrder(card, picked)
+          : picked.length === card.sequence.length &&
+            picked.every((w, i) => w === card.sequence[i]);
+        this.finishQuiz(ok);
+      };
+
+      root.querySelectorAll('.seq-chip').forEach((chip) => {
+        bindTap(chip, () => {
+          if (this.quizLocked || !pool || !target) return;
+          if (chip.parentElement === target) {
+            pool.appendChild(chip);
+          } else {
+            target.appendChild(chip);
+            if (expectedLen > 0 && target.querySelectorAll('.seq-chip').length >= expectedLen) {
+              refreshPh();
+              submitNow();
+              return;
+            }
+          }
+          refreshPh();
+        });
+      });
+      if (submitBtn) bindTap(submitBtn, submitNow);
+      return;
+    }
+
+    root.querySelectorAll('.opt-btn').forEach((btn) => {
+      bindTap(btn, () => this.onChoicePick(btn.dataset.value || btn.textContent, btn));
+    });
+  }
+
+  onChoicePick(opt, btn) {
+    if (this.quizLocked || !this.quizOpen || !this.currentQuiz) return;
     const q = this.currentQuiz;
     const ok = String(opt).trim() === String(q.correct).trim();
+    [...this.els.quizOpts.querySelectorAll('.opt-btn')].forEach((b) => {
+      b.disabled = true;
+      if (String(b.dataset.value || b.textContent).trim() === String(q.correct).trim()) {
+        b.classList.add('correct', 'ok');
+      }
+    });
+    if (!ok && btn) btn.classList.add('wrong', 'bad');
+    this.finishQuiz(ok);
+  }
+
+  finishQuiz(ok) {
+    if (!this.quizOpen || !this.currentQuiz || this.quizLocked) return;
+    this.quizLocked = true;
+    const q = this.currentQuiz;
     const cfg = this.levelCfg();
 
-    // lock buttons
-    [...this.els.quizOpts.children].forEach((b) => {
-      b.style.pointerEvents = 'none';
-      if (String(b.textContent).trim() === String(q.correct).trim()) b.classList.add('ok');
-    });
-    if (!ok) btn.classList.add('bad');
+    if (isOrderingCard(q)) {
+      this.els.quizOpts.querySelectorAll('.seq-chip, .seq-submit').forEach((b) => {
+        b.disabled = true;
+      });
+      const wrap = this.els.quizOpts.querySelector('.seq-wrap');
+      if (wrap) wrap.classList.add(ok ? 'is-correct' : 'is-wrong');
+    }
 
     this.usedQuizKeys.add(quizKey(q));
     this.quizIdx++;
@@ -927,18 +1832,20 @@ class Game {
     if (ok) {
       this.timeLeft = Math.min(this.timeMax + 8, this.timeLeft + cfg.bonus);
       this.score += 15;
-      this.setChat(t('chatOk') + ' ' + t('timeBonus', { n: cfg.bonus }));
+      this.setChat(pickStr('chatOk') + ' ' + t('timeBonus', { n: cfg.bonus }));
     } else {
       this.timeLeft = Math.max(1, this.timeLeft - cfg.penalty);
-      // grow a little hair back as chaos
       this.regrowHair(0.06);
-      this.setChat(t('chatBad') + ' ' + t('timePenalty', { n: cfg.penalty }));
+      this.setChat(pickStr('chatBad') + ' ' + t('timePenalty', { n: cfg.penalty }));
     }
+    this.chatPhase = 'idle';
+    this.chatTimer = 6.8;
     this.els.scoreChip.textContent = `★ ${this.score}`;
 
     setTimeout(() => {
       this.els.quizOverlay.classList.add('hidden');
       this.quizOpen = false;
+      this.quizLocked = false;
       this.currentQuiz = null;
       this.scheduleNextQuiz();
       this.lastTs = performance.now();
@@ -960,18 +1867,28 @@ class Game {
     clearFaceWindow(this.hair);
   }
 
-  winLevel() {
+  handInCut() {
+    if (!this.playing || this.quizOpen) return;
+    this.winLevel({ handedIn: true });
+  }
+
+  winLevel({ handedIn = false } = {}) {
     this.playing = false;
     cancelAnimationFrame(this.raf);
+    if (this.els.btnFinish) this.els.btnFinish.disabled = true;
     const cut = this.matchPct();
+    const early = handedIn && cut < MATCH_TARGET;
     const timeBonus = Math.round(this.timeLeft);
-    const pts = 40 + timeBonus * 2 + this.level * 10 + Math.max(0, cut - MATCH_TARGET);
+    let pts = 40 + timeBonus * 2 + this.level * 10 + Math.max(0, cut - MATCH_TARGET);
+    if (early) {
+      pts = Math.max(8, Math.round(pts * Math.max(0.22, cut / MATCH_TARGET) * 0.75));
+    }
     this.score += pts;
     this.els.scoreChip.textContent = `★ ${this.score}`;
 
     if (this.lesson?.id && this.lesson.id !== 'mock' && window.arborito?.memory?.report) {
       try {
-        window.arborito.memory.report(this.lesson.id, 3);
+        window.arborito.memory.report(this.lesson.id, early ? 2 : 3);
       } catch (_) {}
     }
     if (window.arborito?.xp) {
@@ -981,13 +1898,15 @@ class Game {
     }
 
     this.els.levelPct.textContent = `${cut}%`;
-    this.els.levelPct.className = 'pct';
-    this.els.levelTitle.textContent = t('levelWinTitle');
-    this.els.levelMsg.textContent = t('levelWinMsg', {
-      cut,
-      pts,
-      time: timeBonus,
-    });
+    this.els.levelPct.className = 'pct' + (early && cut < 50 ? ' meh' : '');
+    this.els.levelTitle.textContent = early ? t('handInTitle') : t('levelWinTitle');
+    this.els.levelMsg.textContent = early
+      ? t('handInMsg', { cut, pts })
+      : t('levelWinMsg', {
+          cut,
+          pts,
+          time: timeBonus,
+        });
     this.els.btnNextLevel.textContent =
       this.level >= TOTAL_LEVELS ? t('nextLesson') : t('nextClient');
     this.els.level.classList.remove('hidden');

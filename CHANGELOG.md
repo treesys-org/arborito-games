@@ -4,6 +4,13 @@ Browser cartridges only. The app loads this repo via jsDelivr; bump **`meta.json
 
 ## Catalog
 
+### Lengua Suelta `1.0.1`
+
+- More haircut shapes (ponytail, spikes, afro, undercut, side part, long, top knot, curtain, crew, horns) and a larger pool of client chatter and order lines.
+- Quiz interrupts use every playable Quiz V2 mode (multiple, recall, cloze, chips, steps) via the host SDK answer UI.
+- Mid-cut quizzes are framed as salon small-talk (“oh by the way…”, “do you remember…?”).
+- Hand-in button to deliver a cut early; clients open by naming quiz topics (same idea as Classroom); chat lines linger longer with a soft fade.
+
 ### Lengua Suelta `1.0.0`
 
 - New cartridge: match the ordered haircut at Lengua Suelta salon against a countdown while random lesson quiz pop-ups interrupt the scissors.
@@ -43,7 +50,7 @@ All cartridges ship as **`1.0.0`**.
 | `classroom` | 1.0.0 |
 | `firstjob` | 1.0.0 |
 | `hacky-terminal` | 1.0.0 |
-| `lengua-suelta` | 1.0.0 |
+| `lengua-suelta` | 1.0.1 |
 | `memory` | 1.0.0 |
 | `starship` | 1.0.1 |
 | `wrong-fruit` | 1.1.1 |

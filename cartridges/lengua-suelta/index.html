@@ -98,10 +98,10 @@
   }
 
   .tools {
-    display: flex; gap: .3rem; justify-content: center; flex-shrink: 0;
+    display: flex; gap: .3rem; justify-content: center; flex-shrink: 0; flex-wrap: wrap;
   }
   .tool {
-    flex: 1; max-width: 11rem;
+    flex: 1; max-width: 11rem; min-width: 0;
     padding: .38rem .5rem; border-radius: .55rem; font-size: .7rem; font-weight: 800;
     border: 2px solid transparent; cursor: pointer; font-family: inherit;
     background: rgba(0,0,0,.4); color: var(--cream);
@@ -111,6 +111,15 @@
     background: rgba(42,157,143,.25);
     color: #7dd3c5;
   }
+  .btn-finish {
+    flex: 1.1; max-width: 12rem; min-width: 0;
+    padding: .38rem .5rem; border-radius: .55rem; font-size: .7rem; font-weight: 900;
+    border: 2px solid rgba(231,111,81,.65); cursor: pointer; font-family: inherit;
+    background: linear-gradient(160deg, #e76f51, #c44d32); color: #fff;
+    box-shadow: 0 2px 0 #8f331f;
+  }
+  .btn-finish:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0 #8f331f; }
+  .btn-finish:disabled { opacity: .45; cursor: default; box-shadow: none; }
 
   #bottom {
     flex-shrink: 0;
@@ -160,6 +169,22 @@
     min-height: 0;
   }
   #chat-strip strong { color: var(--gold); }
+  #chatText {
+    display: inline-block;
+    max-width: 100%;
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  #chatText.chat-out {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  #chatText.chat-in {
+    animation: chatIn .32s ease;
+  }
+  @keyframes chatIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 
   .overlay {
     position: fixed; inset: 0; z-index: 40;
@@ -228,20 +253,61 @@
   #quizQ {
     font-size: clamp(.85rem, 2.8vw, 1rem); font-weight: 800;
     color: var(--cream); line-height: 1.3; margin-bottom: .65rem;
-    text-align: left;
+    text-align: left; white-space: pre-wrap;
   }
   #quizOpts {
     display: flex; flex-direction: column; gap: .35rem;
   }
-  .qopt {
+  #quizOpts.is-ordering { gap: .2rem; }
+  .opt-btn {
     text-align: left; border: 1px solid rgba(240,217,168,.28);
     background: rgba(0,0,0,.35); color: var(--cream);
     border-radius: .55rem; padding: .55rem .7rem;
     font-weight: 700; font-size: .82rem; font-family: inherit; cursor: pointer;
   }
-  .qopt:active { background: rgba(42,157,143,.3); border-color: var(--accent); }
-  .qopt.ok { border-color: #2a9d8f; background: rgba(42,157,143,.35); }
-  .qopt.bad { border-color: var(--warn); background: rgba(231,111,81,.3); }
+  .opt-btn kbd {
+    display: inline-block; min-width: 1.1rem; text-align: center; margin-right: .35rem;
+    padding: .05rem .25rem; border-radius: .2rem; background: rgba(255,255,255,.12);
+    font-size: .58rem; font-weight: 900; color: #f0d9a8;
+  }
+  .opt-btn:active:not(:disabled) { background: rgba(42,157,143,.3); border-color: var(--accent); }
+  .opt-btn:disabled { opacity: .65; cursor: default; }
+  .opt-btn.correct, .opt-btn.ok { border-color: #2a9d8f; background: rgba(42,157,143,.35); }
+  .opt-btn.wrong, .opt-btn.bad { border-color: var(--warn); background: rgba(231,111,81,.3); }
+
+  .seq-wrap { margin-top: .1rem; }
+  .seq-hint {
+    font-size: .78rem; font-weight: 800; color: var(--cream);
+    margin: 0 0 .45rem; line-height: 1.3; text-align: left; white-space: pre-wrap;
+  }
+  .seq-target {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; min-height: 2.35rem;
+    margin-bottom: .4rem; padding: .4rem .45rem; border-radius: .5rem;
+    border: 2px dashed rgba(240,217,168,.35); background: rgba(0,0,0,.28);
+  }
+  .seq-target:has(.seq-chip) .seq-target-ph { display: none; }
+  .seq-target-ph {
+    width: 100%; text-align: center; font-size: .64rem; font-weight: 600;
+    color: rgba(240,217,168,.55); font-style: italic; line-height: 1.35; padding: .15rem 0;
+  }
+  .seq-pool { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .4rem; justify-content: center; }
+  .seq-chip {
+    padding: .38rem .5rem; border-radius: .4rem; border: 2px solid rgba(231,111,81,.55);
+    background: linear-gradient(180deg, #5c3d2e, #3a2418); color: var(--cream);
+    font-size: .72rem; font-weight: 700; cursor: pointer; max-width: 100%;
+    line-height: 1.25; white-space: normal; text-align: center; font-family: inherit;
+  }
+  .seq-chip:disabled { opacity: .45; cursor: default; }
+  .seq-target .seq-chip {
+    border-color: #2a9d8f; background: linear-gradient(180deg, #1f5c54, #143d38); color: #ecfdf5;
+  }
+  .seq-submit {
+    width: 100%; padding: .6rem; border: none; border-radius: .5rem;
+    background: linear-gradient(180deg, #e76f51, #c44d32); color: #fff;
+    font-weight: 800; font-size: .78rem; cursor: pointer; font-family: inherit;
+  }
+  .seq-wrap.is-correct .seq-target { border-color: #2a9d8f; }
+  .seq-wrap.is-wrong .seq-target { border-color: var(--warn); }
 </style>
 </head>
 <body>
@@ -264,6 +330,7 @@
   <div class="tools">
     <button type="button" class="tool active" data-tool="cut" id="toolCut">✂ Scissors</button>
     <button type="button" class="tool" data-tool="grow" id="toolGrow">💇 Hair extensions</button>
+    <button type="button" class="btn-finish" id="btnFinish">✓ Hand in cut</button>
   </div>
 
   <div id="salon">
