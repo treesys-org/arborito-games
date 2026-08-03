@@ -57,7 +57,7 @@
         "description": "Match the client's requested cut from the miniature before time runs out at Lengua Suelta hair salon. Random lesson quiz pop-ups interrupt the scissors \u2014 answer right to keep going.",
         "icon": "\ud83d\udc87",
         "path": "./cartridges/lengua-suelta/index.html",
-        "version": "1.0.1",
+        "version": "1.0.2",
         "author": "Arborito Official",
         "descriptions": {
             "en": "Match the client's requested cut from the miniature before time runs out at Lengua Suelta hair salon. Random lesson quiz pop-ups interrupt the scissors \u2014 answer right to keep going.",

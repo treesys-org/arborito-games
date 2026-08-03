@@ -13,8 +13,8 @@ const bindTap =
 const GW = 56;
 const GH = 64;
 const TOTAL_LEVELS = 5;
-/** Win when player hair matches the miniature this closely. */
-const MATCH_TARGET = 78;
+/** Pass mark when the cut is handed in (button or timer). No auto-win on match %. */
+const MATCH_TARGET = 70;
 
 const TITLE = 'Lengua Suelta';
 
@@ -25,7 +25,7 @@ const STR = {
     topicFallback: 'Salon shift',
     clientFallback: 'Client',
     startBody:
-      'Welcome to <strong>Lengua Suelta</strong>. Copy the haircut in the miniature before time runs out. Clients never stop talking — random lesson questions pop up mid-cut. Right answers buy time; wrong ones cost it. Use scissors or hair extensions.',
+      'Welcome to <strong>Lengua Suelta</strong>. Copy the haircut in the miniature, then hand it in — or keep refining until the timer delivers it for you. Clients never stop talking — random lesson questions pop up mid-cut. Right answers buy time; wrong ones cost it. Use scissors or hair extensions.',
     startBtn: 'Open the shop',
     levelChip: 'Lv. {n}',
     cutLabel: 'Match',
@@ -125,7 +125,7 @@ const STR = {
     topicFallback: 'Turno en el salón',
     clientFallback: 'Cliente',
     startBody:
-      'Bienvenido/a a <strong>Lengua Suelta</strong>. Copia el corte de la miniatura antes de que se acabe el tiempo. Los clientes no paran de hablar: preguntas al azar de la lección aparecen a mitad del corte. Si aciertas, ganas tiempo; si fallas, lo pierdes. Usa la tijera o las extensiones.',
+      'Bienvenido/a a <strong>Lengua Suelta</strong>. Copia el corte de la miniatura y entrégalo — o sigue retocando hasta que el reloj lo entregue por ti. Los clientes no paran de hablar: preguntas al azar de la lección aparecen a mitad del corte. Si aciertas, ganas tiempo; si fallas, lo pierdes. Usa la tijera o las extensiones.',
     startBtn: 'Abrir el salón',
     levelChip: 'Niv. {n}',
     cutLabel: 'Parecido',
@@ -1628,13 +1628,10 @@ class Game {
     this.updateHud();
     this.draw();
 
-    if (!this.quizOpen && this.matchPct() >= MATCH_TARGET) {
-      this.winLevel();
-      return;
-    }
+    /* No auto-win on match % — only hand-in button or timer expiry. */
     if (!this.quizOpen && this.timeLeft <= 0) {
       this.timeLeft = 0;
-      this.endSession(false);
+      this.deliverCut({ timedOut: true });
       return;
     }
 
@@ -1869,19 +1866,44 @@ class Game {
 
   handInCut() {
     if (!this.playing || this.quizOpen) return;
-    this.winLevel({ handedIn: true });
+    this.deliverCut({ timedOut: false });
   }
 
-  winLevel({ handedIn = false } = {}) {
+  /**
+   * Deliver the cut: hand-in button or timer (never auto on match %).
+   * Timer with a bad cut ends the shift; early hand-in below the mark
+   * still clears the client with reduced points.
+   */
+  deliverCut({ timedOut = false } = {}) {
+    if (!this.playing) return;
+    const cut = this.matchPct();
+    const passed = cut >= MATCH_TARGET;
+
+    if (timedOut && !passed) {
+      this.endSession(false);
+      return;
+    }
+
+    this.winLevel({
+      handedIn: !timedOut,
+      timedOut,
+      cut,
+    });
+  }
+
+  winLevel({ handedIn = false, timedOut = false, cut: cutArg } = {}) {
     this.playing = false;
     cancelAnimationFrame(this.raf);
     if (this.els.btnFinish) this.els.btnFinish.disabled = true;
-    const cut = this.matchPct();
+    const cut = cutArg != null ? cutArg : this.matchPct();
     const early = handedIn && cut < MATCH_TARGET;
-    const timeBonus = Math.round(this.timeLeft);
+    const timeBonus = Math.round(Math.max(0, this.timeLeft));
     let pts = 40 + timeBonus * 2 + this.level * 10 + Math.max(0, cut - MATCH_TARGET);
     if (early) {
       pts = Math.max(8, Math.round(pts * Math.max(0.22, cut / MATCH_TARGET) * 0.75));
+    } else if (timedOut) {
+      /* Timer forced the hand-in — no leftover-time bonus. */
+      pts = 40 + this.level * 10 + Math.max(0, cut - MATCH_TARGET);
     }
     this.score += pts;
     this.els.scoreChip.textContent = `★ ${this.score}`;

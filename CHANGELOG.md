@@ -4,6 +4,10 @@ Browser cartridges only. The app loads this repo via jsDelivr; bump **`meta.json
 
 ## Catalog
 
+### Lengua Suelta `1.0.2`
+
+- Cut is no longer auto-delivered when the match meter hits the pass mark. Hand it in with the button, or the timer delivers it when time runs out (pass clears the client; a bad timed-out cut ends the shift).
+
 ### Lengua Suelta `1.0.1`
 
 - More haircut shapes (ponytail, spikes, afro, undercut, side part, long, top knot, curtain, crew, horns) and a larger pool of client chatter and order lines.
@@ -50,7 +54,7 @@ All cartridges ship as **`1.0.0`**.
 | `classroom` | 1.0.0 |
 | `firstjob` | 1.0.0 |
 | `hacky-terminal` | 1.0.0 |
-| `lengua-suelta` | 1.0.1 |
+| `lengua-suelta` | 1.0.2 |
 | `memory` | 1.0.0 |
 | `starship` | 1.0.1 |
 | `wrong-fruit` | 1.1.1 |
